@@ -28,6 +28,29 @@ class SutomTry:
         self.date_of_try = date_of_try
         self.time_of_try = time_of_try
 
+        """
+         Return : 
+         - -1 : NOK
+         -  1 : OK, No timestamp
+         -  2 : OK, timestamp
+        """
+def message_validator(message: str) -> int:
+    # -> sutom number
+    if (message[7] == '#'):
+        s_number = ""
+        digit_in_sutom_number = 8
+        while (message[digit_in_sutom_number].isnumeric()):
+            s_number = s_number + message[digit_in_sutom_number]
+            digit_in_sutom_number += 1
+    else:
+        return -1
+    # -> number of try
+    if ((not message[1 + digit_in_sutom_number].isnumeric()) or
+        ((message[2 + digit_in_sutom_number]) != '/') or 
+        (not message[3 + digit_in_sutom_number].isnumeric())):
+        return -1
+    # -> 
+    
 
 def test_bot_connection(client):
     TEST_CHANNEL = os.getenv('TEST_CHANNEL_ID')
@@ -51,11 +74,26 @@ def test_bot_connection(client):
         if (message.content[0:6] == "#SUTOM"):
             print("DETECTED")
 
-def handle_sutom_message(sutom_message: discord.message):
+def handle_sutom_message(sutom_message: discord.message) -> int:
     # Parse the message
     sutom_try = SutomTry()
-    
-
+    # TODO : delete the space before the first #
+    # -> discord ID
+    sutom_try.user_id = sutom_message.author.id
+    # -> sutom number
+    if (sutom_message.content[7] == '#'):
+        s_number = ""
+        digit_in_sutom_number = 0
+        while (sutom_message.content[digit_in_sutom_number].isnumeric()):
+            s_number = s_number + sutom_message.content[digit_in_sutom_number]
+            digit_in_sutom_number += 1
+        sutom_try.sutom_number = s_number
+    else:
+        return -1
+    # -> number of try
+    if (sutom_message.content[9 + digit_in_sutom_number]):
+        pass
+    sutom_try.number_of_try
 
 def main():
     
