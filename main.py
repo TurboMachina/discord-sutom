@@ -3,9 +3,10 @@ import discord
 from dotenv import load_dotenv
 from datetime import datetime
 
-import SutomTry
+from SutomTry import SutomTry
 import results_handler as rd
 
+FILE_RESULTS_PATH = "results.json"
 
 # Example of fetched message : 
 """ 
@@ -86,21 +87,31 @@ def main():
     #intents.message_content = True
     client = discord.Client(intents=intents)
 
-    SUTOM_CHANNEL = os.getenv('SUTOM_CHANNEL_ID')
-    SUTOM_GUILD = os.getenv('SUTOM_GUILD_ID')
+    SUTOM_CHANNEL = os.getenv('TEST_CHANNEL_ID')
+    SUTOM_GUILD = os.getenv('TEST_GUILD_ID')
 
     #test_bot_connection(client)
 
     sutom_try = SutomTry()
 
+    client.commands.Bot(command_prefix="$")
+
     @client.event
     async def on_message(message):
+        for guild in client.guilds:
+            if guild.name == SUTOM_GUILD:
+                break
+        channel_sutom = guild.get_channel(int(SUTOM_CHANNEL))
         if (message.author == client.user):
             return
         if (message.content[0:6] == "#SUTOM"):
             message_handler_validator(message, sutom_try)
             sutom_try.date_of_try = str(datetime.now().date())
-
+            status = rd.write_results(FILE_RESULTS_PATH, sutom_try)
+            if status == -1:
+                await channel_sutom.send(f"Hey, {message.author.mention}, t'as déjà un résultat enregistré pour aujourd'hui")
+        else:
+            await channel_sutom.send("He's ready")
     client.run(TOKEN)
 
 

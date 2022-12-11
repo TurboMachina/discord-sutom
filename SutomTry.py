@@ -1,5 +1,5 @@
 class SutomTry:
-    def __init__(self, user_id, sutom_number, number_of_try, word_len, date_of_try, time_to_guess = '00:00:00'):
+    def __init__(self, user_id = None, sutom_number = None, number_of_try = None, word_len = None, date_of_try = None, time_to_guess = '00:00:00'):
         self.user_id = user_id
         self.sutom_number = sutom_number
         self.number_of_try = number_of_try

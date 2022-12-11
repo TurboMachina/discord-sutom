@@ -1,18 +1,40 @@
 import json
 import SutomTry
 
-def write_json(file_path, sutom_results):
-  with open(file_path, 'r') as f:
-    data = json.load(f)
+"""
+ Returns -1 if record for the day and the user already exist
+"""
+def write_results(file_path: str, sutom_results: SutomTry) -> int:
+    try:
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+    except json.JSONDecodeError:
+        data = []
+    
+    for record in data:
+        if (record.get("date_of_try") == sutom_results.date_of_try and record.get("user_id") == sutom_results.user_id):
+            return -1
 
-  data['discord_id'] = '1234567890'
-  data['results'] = [1, 2, 3]
-  data['time'] = '12:00:00'
-  data['date'] = '2022-12-10'
+    record = dict()
+    record["user_id"] = sutom_results.user_id
+    record["sutom_number"] = sutom_results.sutom_number
+    record["number_of_try"] = sutom_results.number_of_try
+    record["word_len"] = sutom_results.word_len
+    record["time_to_guess"] = sutom_results.time_to_guess
+    record["date_of_try"] = sutom_results.date_of_try
 
-  with open(file_path, 'w') as f:
-    json.dump(data, f)
+    data.append(record)
 
-def read_results(file_path):
+    with open(file_path, 'w') as f:
+        json.dump(data, f)
+    return 0
+
+def print_console_results(file_path: str):
     with open(file_path, 'r') as f:
         data = json.load(f)
+    for record in data:
+        print(record)
+
+def send_results_command(command: str):
+  if command == "":
+    pass
