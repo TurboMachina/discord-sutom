@@ -3,6 +3,7 @@ import discord
 from dotenv import load_dotenv
 from datetime import datetime
 
+import SutomTry
 import results_handler as rd
 
 
@@ -18,36 +19,19 @@ import results_handler as rd
 https://sutom.nocle.fr
 """
 
-class SutomTry:
-    def __init__(self, user_id, sutom_number, number_of_try, word_len, date_of_try, time_to_guess = '00:00:00'):
-        self.user_id = user_id
-        self.sutom_number = sutom_number
-        self.number_of_try = number_of_try
-        self.word_len = word_len
-        self.time_to_guess = time_to_guess
-        self.date_of_try = date_of_try
-
-        """
-         Return : 
-         - -1 : NOK
-         -  1 : OK, No timestamp
-         -  2 : OK, +  timestamp
-        """
 def message_handler_validator(message: discord.message, sutom_try: SutomTry) -> int:
     # -> discord id
     sutom_try.user_id = message.author.id
     message = message.content
     # -> sutom number
-    # TODO condition != # and delete the else 
-    if (message[7] == '#'):
-        s_number = ""
-        digit_in_sutom_number = 8
-        while (message[digit_in_sutom_number].isnumeric()):
-            s_number = s_number + message[digit_in_sutom_number]
-            digit_in_sutom_number += 1
-        sutom_try = s_number
-    else:
+    if (message[7] != '#'):
         return -1
+    s_number = ""
+    digit_in_sutom_number = 8
+    while (message[digit_in_sutom_number].isnumeric()):
+        s_number = s_number + message[digit_in_sutom_number]
+        digit_in_sutom_number += 1
+    sutom_try.number_of_try = s_number
     # -> number of try (result is different than n/n or -/n)
     # TODO compare char with [1,2,3,4,5,6,7,8,9,-] array
     if ((not message[1 + digit_in_sutom_number].isnumeric() or message[1 + digit_in_sutom_number] != '-') or
@@ -62,9 +46,13 @@ def message_handler_validator(message: discord.message, sutom_try: SutomTry) -> 
     if (message.partition("\n")[0].count(':') == 1):
         sutom_try.time_to_guess = message[5 + digit_in_sutom_number:10 + digit_in_sutom_number]
     else:
-        sutom_try.time_to_guess = message[5 + digit_in_sutom_number:13 + digit_in_sutom_number]
+        sutom_try.time_to_guess = sutom_date_formater(message[5 + digit_in_sutom_number:13 + digit_in_sutom_number])
     return 2
     
+# TODO: replace the "h" by ":" and format with zfill(x)
+def sutom_date_formater(sutom_date: str):
+    formated_date = sutom_date.partition("h")[0]
+    return (formated_date.zfill(2)+":"+sutom_date.partition("h")[2])
 
 def test_bot_connection(client):
     TEST_CHANNEL = os.getenv('TEST_CHANNEL_ID')
@@ -112,8 +100,6 @@ def main():
         if (message.content[0:6] == "#SUTOM"):
             message_handler_validator(message, sutom_try)
             sutom_try.date_of_try = str(datetime.now().date())
-        
-
 
     client.run(TOKEN)
 
