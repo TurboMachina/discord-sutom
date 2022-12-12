@@ -127,7 +127,7 @@ def main():
             else:
                 pass
         except IndexError as ex:
-            print(ex)
+            print(ex.with_traceback)
     client.run(TOKEN)
 
 

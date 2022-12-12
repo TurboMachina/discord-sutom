@@ -34,16 +34,21 @@ def write_results(file_path: str, sutom_results: SutomTry) -> int:
 
 def read_results(file_path) -> dict:
     try:
+        file_result = []
         with open(file_path, 'r') as f:
             data = json.load(f)
+            for r in data:
+                    data_result = SutomTry(r["user_id"], r["sutom_number"], r["number_of_try"], r["word_len"], r["date_of_try"], r["time_to_guess"])
+                    file_result.append(data_result)
+
     except json.JSONDecodeError:
         data = []
-    return data
+    return file_result
 
 def compute_avg_time(new_time: int, avg_time: int) -> str:
     times = [new_time, avg_time]
     # @src https://stackoverflow.com/questions/12033905/using-python-to-create-an-average-out-of-a-list-of-times
-    return str(timedelta(seconds=sum(map(lambda f: int(f[0])*3600 + int(f[1])*60 + int(f[2]), map(lambda f: f.split(':'), times)))/len(times)))
+    return str(timedelta(seconds=sum(map(lambda f: int(f[0])*3600 + int(f[1])*60 + int(f[2]), map(lambda f: f.split(':'), times)))/len(times))).partition(".")[0]
     
 # This one is a ChatGPT result
 def return_string_index(index: int) -> str:
@@ -56,11 +61,14 @@ def return_string_index(index: int) -> str:
         "6": "six_try"
   }.get(index, "failed")
 
+# TODO: record every game in second and compute the average based in these instead of recomputing the mean
 def compute_top(data: dict, top_3 = False) -> str:
+    at = "@"
     response = "🏆 Here's the scoreboard 🏆\n"
     top = []
     for record in data:
         if not any(d.get("user_id", None) == record.user_id for d in top):
+            print(record)
             top.append({"user_id": record.user_id, "one_try": 0, "two_try": 0, "three_try": 0, "four_try": 0, "five_try": 0, "six_try": 0, "failed": 0, "avg_time": record.time_to_guess})
             top[len(top)-1][return_string_index(record.number_of_try)] = 1
         else:
@@ -80,7 +88,7 @@ def compute_top(data: dict, top_3 = False) -> str:
             response += "🥉"
         if i not in [0,1,2]:
             response += f"{i}. "
-        response += f"\t{player['user_id']}\n"
+        response += f"\t<{at}{player['user_id']}>\n"
         response += f"\t\t{player['one_try']} : 1/6\n"
         response += f"\t\t{player['two_try']} : 2/6\n"
         response += f"\t\t{player['three_try']} : 3/6\n"
