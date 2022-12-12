@@ -50,11 +50,12 @@ def compute_top(data: dict, top_3 = False) -> str:
     top = []
     for record in data:
         if not any(d.get("user_id", None) == record.user_id for d in top):
-            top.append({"id": record.user_id, "one_try": 0, "two_try": 0, "three_try": 0, "four_try": 0, "five_try": 0, "six_try": 0, "failed": 0, "avg_time": None})
+            top.append({"id": record.user_id, "one_try": 0, "two_try": 0, "three_try": 0, "four_try": 0, "five_try": 0, "six_try": 0, "failed": 0, "avg_time": record.time_to_guess})
             top[len(top)-1][f"{record.number_of_try}"] = 1
         else:
             top[top.index(record.user_id)][f"{record.number_of_try}"] += 1
-            top[top.index(record.user_id)]["avg_time"] = compute_avg_time(top[top.index(record.user_id)]["avg_time"], record.time_to_guess)
+            if record.time_to_guess != "00:00:00":
+                top[top.index(record.user_id)]["avg_time"] = compute_avg_time(top[top.index(record.user_id)]["avg_time"], record.time_to_guess)
     # Sort
     top = sorted(top, key=itemgetter("one_try", "two_try", "three_try", "four_try", "five_try", "six_try"), reverse=True)
     
@@ -76,6 +77,7 @@ def compute_top(data: dict, top_3 = False) -> str:
         response += f"\t\t{player.five}/6\n"
         response += f"\t\t{player.six}/6\n"
         response += f"\t\t{player.failed}/6\n"
+        response += f"\t\tAverage time to guess : 🕜 {player.avg_time} 🕜\n"
         i += 1
         if (top_3 and i < 2):
             break
