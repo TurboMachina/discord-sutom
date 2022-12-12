@@ -3,7 +3,7 @@ import discord
 from dotenv import load_dotenv
 from datetime import datetime
 
-from SutomTry import SutomTry
+from SutomTry import SutomTry, FILE_RESULTS_PATH
 import results_handler as rd
 
 
@@ -77,7 +77,7 @@ def test_bot_connection(client):
             f'{guild.name}(id: {guild.id})'
         )
         gen_channel = guild.get_channel(int(TEST_CHANNEL))
-        await gen_channel.send("TEST_PASSED_{}".format(datetime.now()))
+        await gen_channel.send(f"ONLINE {datetime.now()}")
 """     @client.event
     async def on_message(message):
         if (message.author == client.user):
@@ -98,7 +98,7 @@ def main():
     SUTOM_CHANNEL = os.getenv('TEST_CHANNEL_ID')
     SUTOM_GUILD = os.getenv('TEST_GUILD_ID')
 
-    test_bot_connection(client)
+    #test_bot_connection(client)
 
     @client.event
     async def on_message(message):
@@ -108,20 +108,26 @@ def main():
         channel_sutom = guild.get_channel(int(SUTOM_CHANNEL))
         if (message.author == client.user):
             return
-        if (message.content[0:6] == "#SUTOM"):
-            sutom_try = SutomTry()
-            res = message_handler_validator(message, sutom_try)
-            status = res[0]
-            sutom_try = res[1]
-            if status == -1:
-                return
-            sutom_try.date_of_try = str(datetime.now().date())
-            print(f"|Status {status} and try {sutom_try}|")
-            #status = rd.write_results(SutomTry.FILE_RESULTS_PATH, sutom_try)
-            if status == -1:
-                await channel_sutom.send(f"Hey, {message.author.mention}, t'as déjà un résultat enregistré pour aujourd'hui")
-        else:
-            pass
+        try:
+            if (message.content[0:6] == "#SUTOM"):
+                sutom_try = SutomTry()
+                res = message_handler_validator(message, sutom_try)
+                status = res[0]
+                sutom_try = res[1]
+                if status == -1:
+                    return
+                sutom_try.date_of_try = str(datetime.now().date())
+                print(f"|Status {status} and try {sutom_try}|")
+                status = rd.write_results(FILE_RESULTS_PATH, sutom_try)
+                if status == -1:
+                    await channel_sutom.send(f"Hey, {message.author.mention}, t'as déjà un résultat enregistré pour aujourd'hui")
+            if (message.content[0] == '.'):
+                response = rd.send_results_command(message.content.partition(" ")[0])
+                await channel_sutom.send(response)
+            else:
+                pass
+        except IndexError as ex:
+            print(ex)
     client.run(TOKEN)
 
 
