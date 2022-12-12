@@ -4,6 +4,9 @@ from datetime import timedelta
 from operator import itemgetter
 import textwrap
 
+from dotenv import load_dotenv
+import os
+
 """
  Returns -1 if record for the day and the user already exist
 """
@@ -68,7 +71,6 @@ def compute_top(data: dict, top_3 = False) -> str:
     top = []
     for record in data:
         if not any(d.get("user_id", None) == record.user_id for d in top):
-            print(record)
             top.append({"user_id": record.user_id, "one_try": 0, "two_try": 0, "three_try": 0, "four_try": 0, "five_try": 0, "six_try": 0, "failed": 0, "avg_time": record.time_to_guess})
             top[len(top)-1][return_string_index(record.number_of_try)] = 1
         else:
@@ -120,6 +122,9 @@ def print_console_results(file_path: str):
     # TODO: Implement a more beautiful way than the if pick
     # TODO: Graph with pyplot
 def send_results_command(command: str):
+    HIDDEN_COMMAND_1 = os.getenv('HIDDEN_COMMAND_1')
+    HIDDEN_COMMAND_2 = os.getenv('HIDDEN_COMMAND_2')
+    HIDDEN_COMMAND_3 = os.getenv('HIDDEN_COMMAND_3')
     commands = textwrap.dedent("""```
      .h or .help    Cet aide\n \
     .top           Top 3 des meilleurs joueurs par nombre de tentative\n \
