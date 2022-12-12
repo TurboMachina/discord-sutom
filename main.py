@@ -6,7 +6,7 @@ from datetime import datetime
 from SutomTry import SutomTry
 import results_handler as rd
 
-FILE_RESULTS_PATH = "results.json"
+
 
 # Example of fetched message : 
 """ 
@@ -107,7 +107,7 @@ def main():
         if (message.content[0:6] == "#SUTOM"):
             message_handler_validator(message, sutom_try)
             sutom_try.date_of_try = str(datetime.now().date())
-            status = rd.write_results(FILE_RESULTS_PATH, sutom_try)
+            status = rd.write_results(SutomTry.FILE_RESULTS_PATH, sutom_try)
             if status == -1:
                 await channel_sutom.send(f"Hey, {message.author.mention}, t'as déjà un résultat enregistré pour aujourd'hui")
         else:
