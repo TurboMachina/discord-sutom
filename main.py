@@ -11,6 +11,9 @@ import results_handler as rd
 # Example of fetched message : 
 """ 
 #SUTOM #999 4/6 13:37
+#SUTOM #999 -/6 1h37:37
+#SUTOM #999 0/6 13h37:37
+#SUTOM #9999 -/6 1h37:37
 
 🟥🟦🟡🟡🟡🟦🟡
 🟥🟥🟦🟡🟡🟡🟦
@@ -20,35 +23,41 @@ import results_handler as rd
 https://sutom.nocle.fr
 """
 
-def message_handler_validator(message: discord.message, sutom_try: SutomTry) -> tuple[int, SutomTry]:
+def message_handler_validator(message_d: discord.message, sutom_try: SutomTry) -> tuple[int, SutomTry]:
     # -> discord id
-    sutom_try.user_id = message.author.id
-    message = message.content
+    sutom_try.user_id = message_d.author.id
+    message = message_d.content
     # -> sutom number
-    if (message[7] != '#'):
+    try:
+        if (message[7] != '#'):
+            return (-1, None)
+        s_number = ""
+        digit_in_sutom_number = 8
+        while (message[digit_in_sutom_number].isnumeric()):
+            s_number = s_number + message[digit_in_sutom_number]
+            digit_in_sutom_number += 1
+        sutom_try.sutom_number = s_number
+        # -> number of try (result is different than n/n or -/n)
+        # TODO compare char with [1,2,3,4,5,6,7,8,9,-] array
+        if ((not (message[1 + digit_in_sutom_number].isnumeric() or message[1 + digit_in_sutom_number] == '-')) or
+            ((message[2 + digit_in_sutom_number]) != '/') or 
+            (not message[3 + digit_in_sutom_number].isnumeric())):
+            return (-1, None)
+        sutom_try.number_of_try = message[1 + digit_in_sutom_number]
+        sutom_try.word_len = message[3 + digit_in_sutom_number]
+        # -> game time
+        if (len(message.partition("\n")[0])) < 19:
+            return (1, sutom_try)
+        if (message.partition("\n")[0].count('h') == 1):
+            sutom_try.time_to_guess = sutom_date_formater(message[5 + digit_in_sutom_number:13 + digit_in_sutom_number])
+        else:
+            sutom_try.time_to_guess = "00:" + message[5 + digit_in_sutom_number:10 + digit_in_sutom_number]
+        # TODO: depending if 1h00:00 or 10h:00:00 the \n is taken
+        sutom_try.time_to_guess = sutom_try.time_to_guess.strip()
+        return (2, sutom_try)
+    except IndexError as ie:
+        print(f"Error in MESSAGE_HANDLER_VALIDATOR.\nMessage is {message} \nwith exception{ie}")
         return (-1, None)
-    s_number = ""
-    digit_in_sutom_number = 8
-    while (message[digit_in_sutom_number].isnumeric()):
-        s_number = s_number + message[digit_in_sutom_number]
-        digit_in_sutom_number += 1
-    sutom_try.number_of_try = s_number
-    # -> number of try (result is different than n/n or -/n)
-    # TODO compare char with [1,2,3,4,5,6,7,8,9,-] array
-    if ((not message[1 + digit_in_sutom_number].isnumeric() or message[1 + digit_in_sutom_number] != '-') or
-        ((message[2 + digit_in_sutom_number]) != '/') or 
-        (not message[3 + digit_in_sutom_number].isnumeric())):
-        return (-1, None)
-    sutom_try.number_of_try = message[1 + digit_in_sutom_number]
-    sutom_try.word_len = message[3 + digit_in_sutom_number]
-    # -> game time
-    if (print(len(message.partition("\n")[0])) < 19):
-        return (1, sutom_try)
-    if (message.partition("\n")[0].count('h') == 1):
-        sutom_try.time_to_guess = "00:" + message[5 + digit_in_sutom_number:10 + digit_in_sutom_number]
-    else:
-        sutom_try.time_to_guess = sutom_date_formater(message[5 + digit_in_sutom_number:13 + digit_in_sutom_number])
-    return (2, sutom_try)
     
 # TODO: replace the "h" by ":" and format with zfill(x)
 def sutom_date_formater(sutom_date: str):
@@ -69,12 +78,12 @@ def test_bot_connection(client):
         )
         gen_channel = guild.get_channel(int(TEST_CHANNEL))
         await gen_channel.send("TEST_PASSED_{}".format(datetime.now()))
-    @client.event
+"""     @client.event
     async def on_message(message):
         if (message.author == client.user):
             return
         if (message.content[0:6] == "#SUTOM"):
-            print("DETECTED")
+            print("DETECTED") """
 
 def main():
     
@@ -89,11 +98,7 @@ def main():
     SUTOM_CHANNEL = os.getenv('TEST_CHANNEL_ID')
     SUTOM_GUILD = os.getenv('TEST_GUILD_ID')
 
-    #test_bot_connection(client)
-
-    #sutom_try = SutomTry()
-
-    client.commands.Bot(command_prefix="$")
+    test_bot_connection(client)
 
     @client.event
     async def on_message(message):
@@ -105,11 +110,14 @@ def main():
             return
         if (message.content[0:6] == "#SUTOM"):
             sutom_try = SutomTry()
-            (status, sutom_try) = message_handler_validator(message, sutom_try)
+            res = message_handler_validator(message, sutom_try)
+            status = res[0]
+            sutom_try = res[1]
             if status == -1:
                 return
             sutom_try.date_of_try = str(datetime.now().date())
-            status = rd.write_results(SutomTry.FILE_RESULTS_PATH, sutom_try)
+            print(f"|Status {status} and try {sutom_try}|")
+            #status = rd.write_results(SutomTry.FILE_RESULTS_PATH, sutom_try)
             if status == -1:
                 await channel_sutom.send(f"Hey, {message.author.mention}, t'as déjà un résultat enregistré pour aujourd'hui")
         else:

@@ -7,3 +7,5 @@ class SutomTry:
         self.word_len = word_len
         self.time_to_guess = time_to_guess
         self.date_of_try = date_of_try
+    def __str__(self) -> str:
+        return f"ID: {self.user_id}, #{self.sutom_number}, {self.number_of_try}/{self.word_len} in {self.time_to_guess} on {self.date_of_try}"
