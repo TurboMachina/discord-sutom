@@ -23,7 +23,7 @@ import results_handler as rd
 https://sutom.nocle.fr
 """
 
-def message_handler_validator(message_d: discord.message, sutom_try: SutomTry) -> tuple[int, SutomTry]:
+def message_handler_validator(message_d: discord.message, sutom_try: SutomTry):
     # -> discord id
     sutom_try.user_id = message_d.author.id
     message = message_d.content
@@ -65,25 +65,21 @@ def sutom_date_formater(sutom_date: str):
     return (formated_date.zfill(2)+":"+sutom_date.partition("h")[2])
 
 def test_bot_connection(client):
-    TEST_CHANNEL = os.getenv('TEST_CHANNEL_ID')
-    TEST_GUILD = os.getenv('TEST_GUILD_ID')
+    SUTOM_CHANNEL = os.getenv('SUTOM_CHANNEL_ID')
+    SUTOM_GUILD = os.getenv('MAGENOIR_GUILD_ID')
     @client.event
     async def on_ready():
         for guild in client.guilds:
-            if guild.name == TEST_GUILD:
+            if str(guild.id) == str(SUTOM_GUILD):
+                print("BREAKING")
                 break
-        print(
-            f'{client.user} is connected to the following guild:\n'
-            f'{guild.name}(id: {guild.id})'
-        )
-        gen_channel = guild.get_channel(int(TEST_CHANNEL))
-        await gen_channel.send(f"ONLINE {datetime.now()}")
-"""     @client.event
-    async def on_message(message):
-        if (message.author == client.user):
-            return
-        if (message.content[0:6] == "#SUTOM"):
-            print("DETECTED") """
+        gen_channel = guild.get_channel(int(SUTOM_CHANNEL))
+        l = client.latency
+        print(l)
+        l = str(l).partition(".")[2]
+        l = l[0:3] + "ms" 
+        #await gen_channel.send(f"ONLINE, ping {l}")
+        #await gen_channel.send(" 🟥🟥🟥🟥🟥🟥 SUTOM BOT IS UP 🤖 ")
 
 def main():
     
@@ -95,21 +91,22 @@ def main():
     #intents.message_content = True
     client = discord.Client(intents=intents)
 
-    SUTOM_CHANNEL = os.getenv('TEST_CHANNEL_ID')
-    SUTOM_GUILD = os.getenv('TEST_GUILD_ID')
+    SUTOM_CHANNEL = os.getenv('SUTOM_CHANNEL_ID')
+    SUTOM_GUILD = os.getenv('MAGENOIR_GUILD_ID')
 
-    #test_bot_connection(client)
+    test_bot_connection(client)
 
     @client.event
     async def on_message(message):
         for guild in client.guilds:
-            if guild.name == SUTOM_GUILD:
+            if str(guild.id) == str(SUTOM_GUILD):
                 break
         channel_sutom = guild.get_channel(int(SUTOM_CHANNEL))
         if (message.author == client.user):
             return
         try:
             if (message.content[0:6] == "#SUTOM"):
+                print("Sutom detected")
                 sutom_try = SutomTry()
                 res = message_handler_validator(message, sutom_try)
                 status = res[0]
@@ -128,6 +125,7 @@ def main():
                 pass
         except IndexError as ex:
             print(ex.with_traceback)
+    
     client.run(TOKEN)
 
 

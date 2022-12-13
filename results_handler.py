@@ -1,6 +1,6 @@
 import json
 from SutomTry import SutomTry, FILE_RESULTS_PATH
-from datetime import timedelta
+from datetime import timedelta, datetime
 from operator import itemgetter
 import textwrap
 
@@ -100,7 +100,7 @@ def compute_top(data: dict, top_3 = False) -> str:
         response += f"\t\t{player['failed']} : -/6\n"
         response += f"\t\tAverage time to guess : 🕜 {player['avg_time']} 🕜\n"
         i += 1
-        if (top_3 and i < 2):
+        if (top_3 and i > 2):
             break
     return response
 
@@ -121,7 +121,7 @@ def print_console_results(file_path: str):
     """
     # TODO: Implement a more beautiful way than the if pick
     # TODO: Graph with pyplot
-def send_results_command(command: str):
+def send_results_command(command: str, client):
     HIDDEN_COMMAND_1 = os.getenv('HIDDEN_COMMAND_1')
     HIDDEN_COMMAND_2 = os.getenv('HIDDEN_COMMAND_2')
     HIDDEN_COMMAND_3 = os.getenv('HIDDEN_COMMAND_3')
@@ -141,4 +141,6 @@ def send_results_command(command: str):
         return "```Not yet implemented```"
     if command == ".me":
         return "```Not yet implemented```"
+    if command == ".status":
+        return f"Time : {datetime.now()} ping : {client.latency}"
     return f"Commande non valide. Liste des commandes (.h ou .help) :\n{commands}" 
