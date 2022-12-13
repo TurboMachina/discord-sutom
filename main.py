@@ -24,6 +24,7 @@ https://sutom.nocle.fr
 """
 
 def message_handler_validator(message_d: discord.message, sutom_try: SutomTry):
+def message_handler_validator(message_d: discord.message, sutom_try: SutomTry):
     # -> discord id
     sutom_try.user_id = message_d.author.id
     message = message_d.content
@@ -67,6 +68,8 @@ def sutom_date_formater(sutom_date: str):
 def test_bot_connection(client):
     SUTOM_CHANNEL = os.getenv('SUTOM_CHANNEL_ID')
     SUTOM_GUILD = os.getenv('MAGENOIR_GUILD_ID')
+    SUTOM_CHANNEL = os.getenv('SUTOM_CHANNEL_ID')
+    SUTOM_GUILD = os.getenv('MAGENOIR_GUILD_ID')
     @client.event
     async def on_ready():
         for guild in client.guilds:
@@ -93,12 +96,16 @@ def main():
 
     SUTOM_CHANNEL = os.getenv('SUTOM_CHANNEL_ID')
     SUTOM_GUILD = os.getenv('MAGENOIR_GUILD_ID')
+    SUTOM_CHANNEL = os.getenv('SUTOM_CHANNEL_ID')
+    SUTOM_GUILD = os.getenv('MAGENOIR_GUILD_ID')
 
+    test_bot_connection(client)
     test_bot_connection(client)
 
     @client.event
     async def on_message(message):
         for guild in client.guilds:
+            if str(guild.id) == str(SUTOM_GUILD):
             if str(guild.id) == str(SUTOM_GUILD):
                 break
         channel_sutom = guild.get_channel(int(SUTOM_CHANNEL))
@@ -131,6 +138,7 @@ def main():
                 pass
         except IndexError as ex:
             print(ex.with_traceback)
+    
     
     client.run(TOKEN)
 

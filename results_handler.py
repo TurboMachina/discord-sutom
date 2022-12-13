@@ -1,8 +1,11 @@
 import json
 from SutomTry import SutomTry, FILE_RESULTS_PATH
-from datetime import timedelta
+from datetime import timedelta, datetime
 from operator import itemgetter
 import textwrap
+
+from dotenv import load_dotenv
+import os
 
 from dotenv import load_dotenv
 import os
@@ -121,7 +124,7 @@ def print_console_results(file_path: str):
     """
     # TODO: Implement a more beautiful way than the if pick
     # TODO: Graph with pyplot
-def send_results_command(command: str):
+def send_results_command(command: str, client):
     HIDDEN_COMMAND_1 = os.getenv('HIDDEN_COMMAND_1')
     HIDDEN_COMMAND_2 = os.getenv('HIDDEN_COMMAND_2')
     HIDDEN_COMMAND_3 = os.getenv('HIDDEN_COMMAND_3')
@@ -141,4 +144,6 @@ def send_results_command(command: str):
         return "```Not yet implemented```"
     if command == ".me":
         return "```Not yet implemented```"
+    if command == ".status":
+        return f"Time : {datetime.now()} ping : {client.latency}"
     return f"Commande non valide. Liste des commandes (.h ou .help) :\n{commands}" 
