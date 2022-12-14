@@ -7,6 +7,9 @@ import textwrap
 from dotenv import load_dotenv
 import os
 
+from dotenv import load_dotenv
+import os
+
 """
  Returns -1 if record for the day and the user already exist
 """

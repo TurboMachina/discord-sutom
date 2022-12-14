@@ -67,17 +67,19 @@ def sutom_date_formater(sutom_date: str):
 def test_bot_connection(client):
     SUTOM_CHANNEL = os.getenv('SUTOM_CHANNEL_ID')
     SUTOM_GUILD = os.getenv('MAGENOIR_GUILD_ID')
+    SUTOM_CHANNEL = os.getenv('SUTOM_CHANNEL_ID')
+    SUTOM_GUILD = os.getenv('MAGENOIR_GUILD_ID')
     @client.event
     async def on_ready():
         for guild in client.guilds:
             if str(guild.id) == str(SUTOM_GUILD):
-                print("BREAKING")
                 break
         gen_channel = guild.get_channel(int(SUTOM_CHANNEL))
         l = client.latency
-        print(l)
         l = str(l).partition(".")[2]
         l = l[0:3] + "ms" 
+        print(l)
+        print("Connected to : ",guild.name)
         #await gen_channel.send(f"ONLINE, ping {l}")
         #await gen_channel.send(" 🟥🟥🟥🟥🟥🟥 SUTOM BOT IS UP 🤖 ")
 
@@ -93,7 +95,10 @@ def main():
 
     SUTOM_CHANNEL = os.getenv('SUTOM_CHANNEL_ID')
     SUTOM_GUILD = os.getenv('MAGENOIR_GUILD_ID')
+    SUTOM_CHANNEL = os.getenv('SUTOM_CHANNEL_ID')
+    SUTOM_GUILD = os.getenv('MAGENOIR_GUILD_ID')
 
+    test_bot_connection(client)
     test_bot_connection(client)
 
     @client.event
@@ -105,7 +110,11 @@ def main():
         if (message.author == client.user):
             return
         try:
-            if (message.content[0:6] == "#SUTOM"):
+            # TODO: partion(" ")[0] in [sutom, SUTOM, ...]
+            if (message.content[0:6] == "#SUTOM" or 
+                message.content[0:5] == "SUTOM" or 
+                message.content[0:6] == "#sutom" or 
+                message.content[0:5] == "sutom"):
                 print("Sutom detected")
                 sutom_try = SutomTry()
                 res = message_handler_validator(message, sutom_try)
@@ -118,13 +127,16 @@ def main():
                 status = rd.write_results(FILE_RESULTS_PATH, sutom_try)
                 if status == -1:
                     await channel_sutom.send(f"Hey, {message.author.mention}, t'as déjà un résultat enregistré pour aujourd'hui")
+                if status == 0:
+                    await channel_sutom.send(f"Résultat enregistré, {message.author.mention}.")
             if (message.content[0] == '.'):
-                response = rd.send_results_command(message.content.partition(" ")[0])
+                response = rd.send_results_command(message.content.partition(" ")[0], client)
                 await channel_sutom.send(response)
             else:
                 pass
         except IndexError as ex:
             print(ex.with_traceback)
+    
     
     client.run(TOKEN)
 
