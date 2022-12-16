@@ -93,10 +93,27 @@ def return_string_index(index: str) -> str:
         "6": "six_try"
   }.get(index, "failed")
 
+def contruct_result_message(player, client) -> str:
+    response = ""
+    if player == None:
+        return "Pas (encore) de résultat pour toi! 🤖"
+    response += f"\t {(client.fetch_user(player['user_id'])).display_name} \n"
+    response += f"\t\t{player['one_try']} : 1/6\n"
+    response += f"\t\t{player['two_try']} : 2/6\n"
+    response += f"\t\t{player['three_try']} : 3/6\n"
+    response += f"\t\t{player['four_try']} : 4/6\n"
+    response += f"\t\t{player['five_try']} : 5/6\n"
+    response += f"\t\t{player['six_try']} : 6/6\n"
+    response += f"\t\t{player['failed']} : -/6\n"
+    response += f"\t\tAverage score : {player['avg_score']:.2f}\n"
+    response += f"\t\tAverage time to guess : 🕜 {player['avg_time']} 🕜\n"
+    return response
+
 # TODO: record every game in second and compute the average based in these instead of recomputing the mean
-def compute_top(client, data: dict, top_3 = False) -> str:
-    at = "@"
-    response = "🏆 Here's the scoreboard 🏆\n"
+def compute_top(client, data: dict, top_3 = False, me = False, yesterday = False) -> str:
+    response = ""
+    if (not (me or yesterday)):
+        response += "🏆 Here's the scoreboard 🏆\n"
     top = []
     for record in data:
         if not any(d.get("user_id", None) == record.user_id for d in top):
@@ -119,6 +136,12 @@ def compute_top(client, data: dict, top_3 = False) -> str:
     for player in top:
         player["avg_score"] = compute_avg_score(player)
     top = sorted(top, key="avg_score")
+
+    if me:
+        return contruct_result_message(next((p for p in top if p['user_id'] == me), None), client)
+    if yesterday:
+        pass
+
     i = 0
     for player in top:
         if i == 0:
@@ -128,17 +151,8 @@ def compute_top(client, data: dict, top_3 = False) -> str:
         if i == 2:
             response += "🥉"
         if i not in [0,1,2]:
-            response += f"{i}. "
-        response += f"\t {(client.fetch_user(player['user_id'])).display_name} \n"
-        response += f"\t\t{player['one_try']} : 1/6\n"
-        response += f"\t\t{player['two_try']} : 2/6\n"
-        response += f"\t\t{player['three_try']} : 3/6\n"
-        response += f"\t\t{player['four_try']} : 4/6\n"
-        response += f"\t\t{player['five_try']} : 5/6\n"
-        response += f"\t\t{player['six_try']} : 6/6\n"
-        response += f"\t\t{player['failed']} : -/6\n"
-        response += f"\t\tAverage score : {player['avg_score']}\n"
-        response += f"\t\tAverage time to guess : 🕜 {player['avg_time']:.2f} 🕜\n"
+            response += f"{i+1}. "
+        contruct_result_message(player, client)
         i += 1
         if (top_3 and i > 2):
             break
@@ -162,16 +176,18 @@ def print_console_results(file_path: str):
     # TODO: Implement a more beautiful way than the if pick
     # TODO: Graph with pyplot
     # TODO: number of game played, .player [player_name]
-def send_results_command(command: str, client):
+def send_results_command(command: str, client, me = False):
     HIDDEN_COMMAND_1 = os.getenv('HIDDEN_COMMAND_1')
     HIDDEN_COMMAND_2 = os.getenv('HIDDEN_COMMAND_2')
     HIDDEN_COMMAND_3 = os.getenv('HIDDEN_COMMAND_3')
     commands = textwrap.dedent("""```
      .h or .help    Cet aide\n \
-    .top           Top 3 des meilleurs joueurs par nombre de tentative\n \
+    .top           Top 3 des meilleurs joueurs par nombre de
+                    tentative\n \
     .list          Liste tous les joueurs et leurs stats\n \
     .yesterday     Liste des parties d'hier\n \
-    .me            Mes stats\n```""")
+    .me            Mes stats\n \
+    .takeda        takeda```""")
     if command == ".h" or command == ".help":
         return commands
     if command == ".top":
@@ -181,7 +197,7 @@ def send_results_command(command: str, client):
     if command == ".yesterday":
         return "```Not yet implemented```"
     if command == ".me":
-        return "```Not yet implemented```"
+        return compute_top(client, read_results(FILE_RESULTS_PATH), False, me)
     if command == ".status":
         return f"Time : {datetime.now()} ping : {client.latency}"
     return f"Commande non valide. Liste des commandes (.h ou .help) :\n{commands}" 

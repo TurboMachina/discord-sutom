@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, getopt
 import discord
 from dotenv import load_dotenv
 from datetime import datetime
@@ -64,11 +64,7 @@ def sutom_date_formater(sutom_date: str):
     formated_date = sutom_date.partition("h")[0]
     return (formated_date.zfill(2)+":"+sutom_date.partition("h")[2])
 
-def test_bot_connection(client):
-    SUTOM_CHANNEL = os.getenv('SUTOM_CHANNEL_ID')
-    SUTOM_GUILD = os.getenv('MAGENOIR_GUILD_ID')
-    SUTOM_CHANNEL = os.getenv('SUTOM_CHANNEL_ID')
-    SUTOM_GUILD = os.getenv('MAGENOIR_GUILD_ID')
+def print_status(client, SUTOM_CHANNEL, SUTOM_GUILD):
     @client.event
     async def on_ready():
         for guild in client.guilds:
@@ -83,23 +79,41 @@ def test_bot_connection(client):
         #await gen_channel.send(f"ONLINE, ping {l}")
         #await gen_channel.send(" 🟥🟥🟥🟥🟥🟥 SUTOM BOT IS UP 🤖 ")
 
-def main():
-    
+def main(argv):
     load_dotenv()
-    TOKEN = os.getenv('DISCORD_TOKEN')
+    set_mode = False
+    try:
+        opts, args = getopt.getopt(argv,"htr",["test", "run"])
+    except getopt.GetoptError:
+        print ('main.py -t --test / -r --run')
+        sys.exit(2)
+    for opt, arg in opts:
+        if opt == '-h':
+            print ('main.py -t --test / -r --run')
+            sys.exit()
+        elif opt in ("-t", "--test"):
+            print("Test mode")
+            set_mode = True
+            TOKEN = os.getenv('DISCORD_TOKEN_TEST')
+            SUTOM_CHANNEL = os.getenv('TEST_CHANNEL_ID')
+            SUTOM_GUILD = os.getenv('TEST_GUILD_ID')
+        elif opt in ("-r", "--run"):
+            print("Run mode")
+            set_mode = True
+            TOKEN = os.getenv('DISCORD_TOKEN')
+            SUTOM_CHANNEL = os.getenv('SUTOM_CHANNEL_ID')
+            SUTOM_GUILD = os.getenv('MAGENOIR_GUILD_ID')
+    
+    if not set_mode:
+        print ('main.py -t --test / -r --run')
+        sys.exit(2)
     
     intents = discord.Intents.all()
     #intents.messages = True
     #intents.message_content = True
     client = discord.Client(intents=intents)
 
-    SUTOM_CHANNEL = os.getenv('SUTOM_CHANNEL_ID')
-    SUTOM_GUILD = os.getenv('MAGENOIR_GUILD_ID')
-    SUTOM_CHANNEL = os.getenv('SUTOM_CHANNEL_ID')
-    SUTOM_GUILD = os.getenv('MAGENOIR_GUILD_ID')
-
-    test_bot_connection(client)
-    test_bot_connection(client)
+    print_status(client, SUTOM_CHANNEL, SUTOM_GUILD)
 
     @client.event
     async def on_message(message):
@@ -109,6 +123,9 @@ def main():
         channel_sutom = guild.get_channel(int(SUTOM_CHANNEL))
         if (message.author == client.user):
             return
+        # .takeda
+        if (message.content[0:7] == ".takeda"):
+            await channel_sutom.send(file=discord.File('takeda.png'))
         try:
             # TODO: partion(" ")[0] in [sutom, SUTOM, ...] + if # missing, message too short (should be partition selector instead of slicing)
             if (message.content[0:6] == "#SUTOM" or 
@@ -128,16 +145,21 @@ def main():
                 if status == 0:
                     await channel_sutom.send(f"Résultat enregistré, {message.author.mention}.")
             if (message.content[0] == '.'):
-                response = rd.send_results_command(message.content.partition(" ")[0], client)
+                response = rd.send_results_command(message.content.partition(" ")[0], client, message.author.id)
                 await channel_sutom.send(response)
             else:
                 pass
         except IndexError as ex:
+            print("----------------------------------- Main loop exception.\n")
+            print(str(datetime.now()))
+            print(f"Message : {message.content}\n\nException :\n")
+            print(ex)
             print(ex.with_traceback)
+            print("----------------------------------- end of exception log")
     
     
     client.run(TOKEN)
 
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])
