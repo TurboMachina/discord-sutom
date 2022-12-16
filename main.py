@@ -110,11 +110,9 @@ def main():
         if (message.author == client.user):
             return
         try:
-            # TODO: partion(" ")[0] in [sutom, SUTOM, ...]
+            # TODO: partion(" ")[0] in [sutom, SUTOM, ...] + if # missing, message too short (should be partition selector instead of slicing)
             if (message.content[0:6] == "#SUTOM" or 
-                message.content[0:5] == "SUTOM" or 
-                message.content[0:6] == "#sutom" or 
-                message.content[0:5] == "sutom"):
+                message.content[0:6] == "#sutom"):
                 print("Sutom detected")
                 sutom_try = SutomTry()
                 res = message_handler_validator(message, sutom_try)

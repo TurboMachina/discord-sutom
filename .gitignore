@@ -129,3 +129,5 @@ results.json
 
 # Pyre type checker
 .pyre/
+
+utils.py

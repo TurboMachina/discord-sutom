@@ -51,13 +51,39 @@ def read_results(file_path) -> dict:
         data = []
     return file_result
 
-def compute_avg_time(new_time: int, avg_time: int) -> str:
+def compute_avg_time_from_str_timestamp(new_time: int, avg_time: int) -> str:
     times = [new_time, avg_time]
     # @src https://stackoverflow.com/questions/12033905/using-python-to-create-an-average-out-of-a-list-of-times
     return str(timedelta(seconds=sum(map(lambda f: int(f[0])*3600 + int(f[1])*60 + int(f[2]), map(lambda f: f.split(':'), times)))/len(times))).partition(".")[0]
-    
+
+def compute_avg_time(number_ocr: int, total_time: int) -> str:
+    # @src https://stackoverflow.com/questions/12033905/using-python-to-create-an-average-out-of-a-list-of-times
+    return str(timedelta(seconds=(total_time / number_ocr)))
+
+    """ args : {"user_id": user_id, "one_try": 0, "two_try": 0, "three_try": 0, "four_try": 0, "five_try": 0, "six_try": 0, "failed": 0, "avg_time": 0}
+    """
+def compute_avg_score(player: dict) -> float:
+    number_of_game = ( 
+            player["one_try"]   +
+            player["two_try"]   + 
+            player["three_try"] + 
+            player["four_try"]  + 
+            player["five_try"]  + 
+            player["six_try"]   +
+            player["failed"]     )
+
+    tot = ( player["one_try"]       +
+            player["two_try"]   * 2 + 
+            player["three_try"] * 3 + 
+            player["four_try"]  * 4 + 
+            player["five_try"]  * 5 + 
+            player["six_try"]   * 6  )
+
+    return (tot / number_of_game)
+
+
 # This one is a ChatGPT result
-def return_string_index(index: int) -> str:
+def return_string_index(index: str) -> str:
       return {
         "1": "one_try",
         "2": "two_try",
@@ -68,7 +94,7 @@ def return_string_index(index: int) -> str:
   }.get(index, "failed")
 
 # TODO: record every game in second and compute the average based in these instead of recomputing the mean
-def compute_top(data: dict, top_3 = False) -> str:
+def compute_top(client, data: dict, top_3 = False) -> str:
     at = "@"
     response = "🏆 Here's the scoreboard 🏆\n"
     top = []
@@ -79,10 +105,20 @@ def compute_top(data: dict, top_3 = False) -> str:
         else:
             index_of_user_id = next((i for i, item in enumerate(top) if item["user_id"] == record.user_id), None)
             top[index_of_user_id][return_string_index(record.number_of_try)] += 1
-            if record.time_to_guess != "00:00:00":
-                top[index_of_user_id]["avg_time"] = compute_avg_time(top[index_of_user_id]["avg_time"], record.time_to_guess)
-    # Sort
-    top = sorted(top, key=itemgetter("one_try", "two_try", "three_try", "four_try", "five_try", "six_try"), reverse=True)
+            if record.time_to_guess != 0:
+                top[index_of_user_id]["avg_time"] += record.time_to_guess
+    
+    # Compute average time based on total time in each player
+    for player in top:
+        nb_ocr = player["one_try"] + player["two_try"] + player["three_try"] + player["four_try"] + player["five_try"] + player["six_try"]
+        player["avg_time"] = compute_avg_time(nb_ocr, player["avg_time"])
+
+    # Sort by each type of score
+    # top = sorted(top, key=itemgetter("one_try", "two_try", "three_try", "four_try", "five_try", "six_try"), reverse=True)
+    
+    for player in top:
+        player["avg_score"] = compute_avg_score(player)
+    top = sorted(top, key="avg_score")
     i = 0
     for player in top:
         if i == 0:
@@ -93,7 +129,7 @@ def compute_top(data: dict, top_3 = False) -> str:
             response += "🥉"
         if i not in [0,1,2]:
             response += f"{i}. "
-        response += f"\t<{at}{player['user_id']}>\n"
+        response += f"\t {(client.fetch_user(player['user_id'])).display_name} \n"
         response += f"\t\t{player['one_try']} : 1/6\n"
         response += f"\t\t{player['two_try']} : 2/6\n"
         response += f"\t\t{player['three_try']} : 3/6\n"
@@ -101,7 +137,8 @@ def compute_top(data: dict, top_3 = False) -> str:
         response += f"\t\t{player['five_try']} : 5/6\n"
         response += f"\t\t{player['six_try']} : 6/6\n"
         response += f"\t\t{player['failed']} : -/6\n"
-        response += f"\t\tAverage time to guess : 🕜 {player['avg_time']} 🕜\n"
+        response += f"\t\tAverage score : {player['avg_score']}\n"
+        response += f"\t\tAverage time to guess : 🕜 {player['avg_time']:.2f} 🕜\n"
         i += 1
         if (top_3 and i > 2):
             break
@@ -124,6 +161,7 @@ def print_console_results(file_path: str):
     """
     # TODO: Implement a more beautiful way than the if pick
     # TODO: Graph with pyplot
+    # TODO: number of game played, .player [player_name]
 def send_results_command(command: str, client):
     HIDDEN_COMMAND_1 = os.getenv('HIDDEN_COMMAND_1')
     HIDDEN_COMMAND_2 = os.getenv('HIDDEN_COMMAND_2')
@@ -137,9 +175,9 @@ def send_results_command(command: str, client):
     if command == ".h" or command == ".help":
         return commands
     if command == ".top":
-        return compute_top(read_results(FILE_RESULTS_PATH), True)
+        return compute_top(client, read_results(FILE_RESULTS_PATH), True)
     if command == ".list":
-        return compute_top(read_results(FILE_RESULTS_PATH))
+        return compute_top(client, read_results(FILE_RESULTS_PATH))
     if command == ".yesterday":
         return "```Not yet implemented```"
     if command == ".me":
