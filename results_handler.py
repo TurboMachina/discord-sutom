@@ -10,14 +10,14 @@ import os
 from dotenv import load_dotenv
 import os
 
-LEET = """
+LEET = """```
 .__                 __   
 |  |   ____   _____/  |_ 
 |  | _/ __ \_/ __ \   __\\
 |  |_\  ___/\  ___/|  |  
 |____/\___  >\___  >__|  
           \/     \/      
-"""
+```"""
 
 """
  Returns -1 if record for the day and the user already exist
@@ -209,7 +209,8 @@ def send_results_command(command: str, client, me = False):
     .today          Liste des parties d'aujourd'hui\n \
     .yesterday     Liste des parties d'hier\n \
     .me            Mes stats\n \
-    .takeda        takeda```""")
+    .takeda        takeda\n
+    .leet          is it ? 👾```""")
     if command == ".h" or command == ".help":
         return commands
     if command == ".top":
@@ -225,8 +226,8 @@ def send_results_command(command: str, client, me = False):
     if command == ".status":
         return f"Time : {datetime.now()} ping : {client.latency}"
     if command == ".leet":
-        if datetime.now().hour == 15 and datetime.now().minute == 37:
+        if datetime.now().hour == 13 and datetime.now().minute == 37:
             return LEET
         else:
-            return "It's not leet."
+            return "It's not leet... 🤖"
     return f"Commande non valide. Liste des commandes (.h ou .help) :\n{commands}" 

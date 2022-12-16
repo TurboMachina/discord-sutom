@@ -84,8 +84,6 @@ def print_status(client, SUTOM_CHANNEL, SUTOM_GUILD):
         l = l[0:3] + "ms" 
         print(l)
         print("Connected to : ",guild.name)
-        #await gen_channel.send(f"ONLINE, ping {l}")
-        #await gen_channel.send(" 🟥🟥🟥🟥🟥🟥 SUTOM BOT IS UP 🤖 ")
 
 def main(argv):
     load_dotenv()
