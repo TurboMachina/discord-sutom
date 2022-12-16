@@ -141,6 +141,8 @@ def main(argv):
                 res = message_handler_validator(message, sutom_try)
                 status = res[0]
                 sutom_try = res[1]
+                if status == 1:
+                    await channel_sutom.send(f"N'oublie pas d'activer le compteur de temps dans les paramètres du jeu 👀🕜")
                 if status == -1:
                     return
                 sutom_try.date_of_try = str(datetime.now().date())
