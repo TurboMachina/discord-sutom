@@ -10,6 +10,15 @@ import os
 from dotenv import load_dotenv
 import os
 
+LEET = """
+.__                 __   
+|  |   ____   _____/  |_ 
+|  | _/ __ \_/ __ \   __\\
+|  |_\  ___/\  ___/|  |  
+|____/\___  >\___  >__|  
+          \/     \/      
+"""
+
 """
  Returns -1 if record for the day and the user already exist
 """
@@ -93,11 +102,34 @@ def return_string_index(index: str) -> str:
         "6": "six_try"
   }.get(index, "failed")
 
-def contruct_result_message(player, client) -> str:
+def get_results_by_date(today: bool, data, client) -> str:
     response = ""
+    if today:
+        t_delta = timedelta(days = 0)
+    else:
+        t_delta = timedelta(days = 1)
+    for player in data:
+        if player.date_of_try == str(datetime.now().date() - t_delta):
+            try:
+                response += f"**{(client.get_user(player.user_id)).display_name}**   \n"
+            except AttributeError:
+                response += f"**{player.user_id}** (did he/she left the server ? 👀) \n"
+            response += f"\t{player.number_of_try}/6 in {str(timedelta(seconds=(player.time_to_guess)))}\n"
+            response += "\n"
+    if response:
+        return response
+    return "No results 😒"
+
+def contruct_result_message(player, client) -> str:
+    avg_time = "00:00:00"
+    response = ""
+    # Possible only if called by .me
     if player == None:
         return "Pas (encore) de résultat pour toi! 🤖"
-    response += f"\t {(client.fetch_user(player['user_id'])).display_name} \n"
+    try:
+        response += f"**{(client.get_user(player['user_id'])).display_name}**   \n"
+    except AttributeError:
+        response += f"{(player['user_id'])} (did he/she left the server ? 👀) \n"
     response += f"\t\t{player['one_try']} : 1/6\n"
     response += f"\t\t{player['two_try']} : 2/6\n"
     response += f"\t\t{player['three_try']} : 3/6\n"
@@ -106,14 +138,13 @@ def contruct_result_message(player, client) -> str:
     response += f"\t\t{player['six_try']} : 6/6\n"
     response += f"\t\t{player['failed']} : -/6\n"
     response += f"\t\tAverage score : {player['avg_score']:.2f}\n"
-    response += f"\t\tAverage time to guess : 🕜 {player['avg_time']} 🕜\n"
+    avg_time = str(player['avg_time']).partition(".")[0]
+    response += f"\t\tAverage time to guess : 🕜 {avg_time} 🕜\n"
     return response
 
 # TODO: record every game in second and compute the average based in these instead of recomputing the mean
-def compute_top(client, data: dict, top_3 = False, me = False, yesterday = False) -> str:
-    response = ""
-    if (not (me or yesterday)):
-        response += "🏆 Here's the scoreboard 🏆\n"
+def compute_top(client, data: dict, top_3 = False, me = False) -> str:
+    response = "🏆 Here's the scoreboard 🏆\n"
     top = []
     for record in data:
         if not any(d.get("user_id", None) == record.user_id for d in top):
@@ -135,12 +166,10 @@ def compute_top(client, data: dict, top_3 = False, me = False, yesterday = False
     
     for player in top:
         player["avg_score"] = compute_avg_score(player)
-    top = sorted(top, key="avg_score")
+    top = sorted(top, key=itemgetter('avg_score'))
 
     if me:
         return contruct_result_message(next((p for p in top if p['user_id'] == me), None), client)
-    if yesterday:
-        pass
 
     i = 0
     for player in top:
@@ -152,7 +181,7 @@ def compute_top(client, data: dict, top_3 = False, me = False, yesterday = False
             response += "🥉"
         if i not in [0,1,2]:
             response += f"{i+1}. "
-        contruct_result_message(player, client)
+        response += contruct_result_message(player, client)
         i += 1
         if (top_3 and i > 2):
             break
@@ -165,14 +194,6 @@ def print_console_results(file_path: str):
     for record in data:
         print(record)
 
-    """ List of commands:
-    /h or /help
-    /top
-    /list
-    /yesterday
-    /me
-
-    """
     # TODO: Implement a more beautiful way than the if pick
     # TODO: Graph with pyplot
     # TODO: number of game played, .player [player_name]
@@ -181,10 +202,11 @@ def send_results_command(command: str, client, me = False):
     HIDDEN_COMMAND_2 = os.getenv('HIDDEN_COMMAND_2')
     HIDDEN_COMMAND_3 = os.getenv('HIDDEN_COMMAND_3')
     commands = textwrap.dedent("""```
-     .h or .help    Cet aide\n \
+     .h or .help    Aide\n \
     .top           Top 3 des meilleurs joueurs par nombre de
                     tentative\n \
     .list          Liste tous les joueurs et leurs stats\n \
+    .today          Liste des parties d'aujourd'hui\n \
     .yesterday     Liste des parties d'hier\n \
     .me            Mes stats\n \
     .takeda        takeda```""")
@@ -192,12 +214,19 @@ def send_results_command(command: str, client, me = False):
         return commands
     if command == ".top":
         return compute_top(client, read_results(FILE_RESULTS_PATH), True)
+    if command == ".today":
+        return get_results_by_date(True, read_results(FILE_RESULTS_PATH), client)
     if command == ".list":
         return compute_top(client, read_results(FILE_RESULTS_PATH))
     if command == ".yesterday":
-        return "```Not yet implemented```"
+        return get_results_by_date(False, read_results(FILE_RESULTS_PATH), client)
     if command == ".me":
         return compute_top(client, read_results(FILE_RESULTS_PATH), False, me)
     if command == ".status":
         return f"Time : {datetime.now()} ping : {client.latency}"
+    if command == ".leet":
+        if datetime.now().hour == 15 and datetime.now().minute == 37:
+            return LEET
+        else:
+            return "It's not leet."
     return f"Commande non valide. Liste des commandes (.h ou .help) :\n{commands}" 

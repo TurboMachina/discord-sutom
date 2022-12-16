@@ -23,6 +23,13 @@ import results_handler as rd
 https://sutom.nocle.fr
 """
 
+def timestamp_to_second(timestamp: int) -> str:
+    h = int(timestamp.partition(":")[0])
+    m = int(timestamp.partition(":")[2].partition(":")[0])
+    s = int(timestamp.partition(":")[2].partition(":")[2])
+    seconds = (3600*h)+(60*m)+s
+    return seconds
+
 def message_handler_validator(message_d: discord.message, sutom_try: SutomTry):
     # -> discord id
     sutom_try.user_id = message_d.author.id
@@ -47,6 +54,7 @@ def message_handler_validator(message_d: discord.message, sutom_try: SutomTry):
         sutom_try.word_len = message[3 + digit_in_sutom_number]
         # -> game time
         if (len(message.partition("\n")[0])) < 19:
+            sutom_try.time_to_guess = "00:00:00"
             return (1, sutom_try)
         if (message.partition("\n")[0].count('h') == 1):
             sutom_try.time_to_guess = sutom_date_formater(message[5 + digit_in_sutom_number:13 + digit_in_sutom_number])
@@ -58,7 +66,7 @@ def message_handler_validator(message_d: discord.message, sutom_try: SutomTry):
     except IndexError as ie:
         print(f"Error in MESSAGE_HANDLER_VALIDATOR.\nMessage is {message} \nwith exception{ie}")
         return (-1, None)
-    
+
 # TODO: replace the "h" by ":" and format with zfill(x)
 def sutom_date_formater(sutom_date: str):
     formated_date = sutom_date.partition("h")[0]
@@ -139,6 +147,7 @@ def main(argv):
                     return
                 sutom_try.date_of_try = str(datetime.now().date())
                 print(f"|Status {status} and try {sutom_try}|")
+                sutom_try.time_to_guess = timestamp_to_second(sutom_try.time_to_guess)
                 status = rd.write_results(FILE_RESULTS_PATH, sutom_try)
                 if status == -1:
                     await channel_sutom.send(f"Hey, {message.author.mention}, t'as déjà un résultat enregistré pour aujourd'hui")
