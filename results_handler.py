@@ -209,7 +209,7 @@ def send_results_command(command: str, client, me = False):
     .today          Liste des parties d'aujourd'hui\n \
     .yesterday     Liste des parties d'hier\n \
     .me            Mes stats\n \
-    .takeda        takeda\n
+    .takeda        takeda\n \
     .leet          is it ? 👾```""")
     if command == ".h" or command == ".help":
         return commands
