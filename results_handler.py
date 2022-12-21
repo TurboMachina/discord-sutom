@@ -169,6 +169,7 @@ def compute_top(client, data: dict, top_3 = False, me = False) -> str:
     top = sorted(top, key=itemgetter('avg_score'))
 
     if me:
+        if type(me) == str : me = int(me[2:-1])
         return contruct_result_message(next((p for p in top if p['user_id'] == me), None), client)
 
     i = 0
@@ -198,19 +199,24 @@ def print_console_results(file_path: str):
     # TODO: Graph with pyplot
     # TODO: number of game played, .player [player_name]
 def send_results_command(command: str, client, me = False):
+    print("=========",command)
+    arg = ""
+    if command[2] != "" : arg = command[2]
+    command = command[0]
     HIDDEN_COMMAND_1 = os.getenv('HIDDEN_COMMAND_1')
     HIDDEN_COMMAND_2 = os.getenv('HIDDEN_COMMAND_2')
     HIDDEN_COMMAND_3 = os.getenv('HIDDEN_COMMAND_3')
     commands = textwrap.dedent("""```
      .h or .help    Aide\n \
-    .top           Top 3 des meilleurs joueurs par nombre de
-                    tentative\n \
-    .list          Liste tous les joueurs et leurs stats\n \
+    .top            Top 3 des meilleurs joueurs par nombre de
+                     tentative\n \
+    .list           Liste tous les joueurs et leurs stats\n \
     .today          Liste des parties d'aujourd'hui\n \
-    .yesterday     Liste des parties d'hier\n \
-    .me            Mes stats\n \
-    .takeda        takeda\n \
-    .leet          is it ? 👾```""")
+    .yesterday      Liste des parties d'hier\n \
+    .me             Mes stats\n \
+    .player @player Stats du joueur\n \
+    .takeda         takeda\n \
+    .leet           is it ? 👾```""")
     if command == ".h" or command == ".help":
         return commands
     if command == ".top":
@@ -222,7 +228,10 @@ def send_results_command(command: str, client, me = False):
     if command == ".yesterday":
         return get_results_by_date(False, read_results(FILE_RESULTS_PATH), client)
     if command == ".me":
+        print(me)
         return compute_top(client, read_results(FILE_RESULTS_PATH), False, me)
+    if command == ".player":
+        return compute_top(client, read_results(FILE_RESULTS_PATH), False, arg)
     if command == ".status":
         return f"Time : {datetime.now()} ping : {client.latency}"
     if command == ".leet":
@@ -230,4 +239,7 @@ def send_results_command(command: str, client, me = False):
             return LEET
         else:
             return "It's not leet... 🤖"
+    # TODO : Vrai systeme d'un joker/semaine (ne modifie pas la moyenne) et pennaliser les joueurs qui ne postent pas tous les jours
+    if command == ".joker":
+        return "ses luient 🤡 🃏"
     return f"Commande non valide. Liste des commandes (.h ou .help) :\n{commands}" 

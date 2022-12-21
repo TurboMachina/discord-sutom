@@ -155,7 +155,7 @@ def main(argv):
                 if status == 0:
                     await channel_sutom.send(f"Résultat enregistré, {message.author.mention}.")
             if (message.content[0] == '.'):
-                response = rd.send_results_command(message.content.partition(" ")[0], client, message.author.id)
+                response = rd.send_results_command(message.content.partition(" "), client, message.author.id)
                 await channel_sutom.send(response)
             else:
                 pass
