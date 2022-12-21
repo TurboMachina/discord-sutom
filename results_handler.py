@@ -199,7 +199,6 @@ def print_console_results(file_path: str):
     # TODO: Graph with pyplot
     # TODO: number of game played, .player [player_name]
 def send_results_command(command: str, client, me = False):
-    print("=========",command)
     arg = ""
     if command[2] != "" : arg = command[2]
     command = command[0]
