@@ -7,8 +7,7 @@ import textwrap
 from dotenv import load_dotenv
 import os
 
-from dotenv import load_dotenv
-import os
+import matplotlib.pyplot as plt
 
 LEET = """```
 .__                 __   
@@ -140,6 +139,12 @@ def contruct_result_message(player, client) -> str:
     response += f"\t\tAverage score : {player['avg_score']:.2f}\n"
     avg_time = str(player['avg_time']).partition(".")[0]
     response += f"\t\tAverage time to guess : 🕜 {avg_time} 🕜\n"
+
+    plt.bar([1,2,3,4,5,6], height=[player["one_try"],player["two_try"],player["three_try"],player["four_try"],player["five_try"],player["six_try"]],color='red')
+    plt.xticks([1,2,3,4,5,6], [1,2,3,4,5,6]);
+    plt.xlabel('Score')
+    plt.savefig("graph.png")
+    
     return response
 
 # TODO: record every game in second and compute the average based in these instead of recomputing the mean
@@ -227,7 +232,6 @@ def send_results_command(command: str, client, me = False):
     if command == ".yesterday":
         return get_results_by_date(False, read_results(FILE_RESULTS_PATH), client)
     if command == ".me":
-        print(me)
         return compute_top(client, read_results(FILE_RESULTS_PATH), False, me)
     if command == ".player":
         return compute_top(client, read_results(FILE_RESULTS_PATH), False, arg)

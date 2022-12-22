@@ -133,6 +133,11 @@ def main(argv):
         if (message.content[0:7] == ".takeda"):
             await channel_sutom.send(file=discord.File('takeda.png'))
             return
+        if (message.content[0:7] == ".graph"):
+            response = rd.send_results_command((".me","",""), client, message.author.id)
+            await channel_sutom.send(response)
+            await channel_sutom.send(file=discord.File('graph.png'))
+            return
         try:
             # TODO: partion(" ")[0] in [sutom, SUTOM, ...] + if # missing, message too short (should be partition selector instead of slicing)
             if (message.content[0:6] == "#SUTOM" or 
