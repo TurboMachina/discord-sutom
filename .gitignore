@@ -131,3 +131,5 @@ results.json
 .pyre/
 
 utils.py
+
+graph.png
