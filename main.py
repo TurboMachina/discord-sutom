@@ -83,7 +83,6 @@ def print_status(client, SUTOM_CHANNEL, SUTOM_GUILD):
         l = str(l).partition(".")[2]
         l = l[0:3] + "ms" 
         print(l)
-        await gen_channel.send(f"Online.\nSync done.\nV2.1\n{l}\n")
         print("Connected to : ",guild.name)
 
 def main(argv):
@@ -161,7 +160,7 @@ def main(argv):
                 if status == 0:
                     await channel_sutom.send(f"Résultat enregistré, {message.author.mention}.")
             if (message.content[0] == '.'):
-                response = rd.send_results_command(message.content.partition(" ")[0], client, message.author.id)
+                response = rd.send_results_command(message.content.partition(" "), client, message.author.id)
                 await channel_sutom.send(response)
             else:
                 pass
