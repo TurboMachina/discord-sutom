@@ -83,6 +83,7 @@ def print_status(client, SUTOM_CHANNEL, SUTOM_GUILD):
         l = str(l).partition(".")[2]
         l = l[0:3] + "ms" 
         print(l)
+        await gen_channel.send(f"Online.\nSync done.\nV2.1\n{l}\n")
         print("Connected to : ",guild.name)
 
 def main(argv):
@@ -132,6 +133,11 @@ def main(argv):
         # .takeda
         if (message.content[0:7] == ".takeda"):
             await channel_sutom.send(file=discord.File('takeda.png'))
+            return
+        if (message.content[0:7] == ".graph"):
+            response = rd.send_results_command((".me","",""), client, message.author.id)
+            await channel_sutom.send(response)
+            await channel_sutom.send(file=discord.File('graph.png'))
             return
         try:
             # TODO: partion(" ")[0] in [sutom, SUTOM, ...] + if # missing, message too short (should be partition selector instead of slicing)
