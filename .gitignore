@@ -126,10 +126,10 @@ venv.bak/
 dmypy.json
 
 results.json
-
+new_struct.json
 # Pyre type checker
 .pyre/
-
+.vscode
 utils.py
 
 graph.png
