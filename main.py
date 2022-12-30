@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from datetime import datetime
 import git
 
-from SutomTry import SutomTry, FILE_RESULTS_PATH
+from SutomRecord import SutomRecord, FILE_RESULTS_PATH
 import results_handler as rd
 
 HELP_MSG = "main.py -t --test / -r --run"
@@ -26,38 +26,42 @@ https://sutom.nocle.fr
 """
 
 
-def timestamp_to_second(timestamp: int) -> str:
+def timestamp_to_second(timestamp: str) -> int:
     h = int(timestamp.partition(":")[0])
     m = int(timestamp.partition(":")[2].partition(":")[0])
     s = int(timestamp.partition(":")[2].partition(":")[2])
     seconds = (3600 * h) + (60 * m) + s
     return seconds
 
-
-def is_last_commit():
-    repo = git.Repo(search_parent_directories=True)
-    head_commit = repo.head.commit
+# TODO : use this
+def print_if_last_commit():
+    repo = git.Repo(search_parent_directories=True, path=".")
+    github_head_commit = repo.head.commit
     current_commit = repo.git.rev_parse("HEAD")
+    print("Last commit: " + str(github_head_commit))
+    print("Current commit: " + str(current_commit))
+    # display if the current commit is the last one
+    print("Is last commit: " + str(github_head_commit == current_commit))
 
-    return head_commit == current_commit
 
-
-def message_handler_validator(message_d: discord.message, sutom_try: SutomTry):
+def sutom_message_validator(message, author, sutom_record: SutomRecord):
     # -> discord id
-    sutom_try.user_id = message_d.author.id
-    message = message_d.content
-    # -> sutom number
+    sutom_record.user_id = author
+    sutom_record.date_of_try = str(datetime.now().date())
+
     try:
         if message[7] != "#":
             return (-1, None)
+
+        # -> sutom number
         s_number = ""
         digit_in_sutom_number = 8
+
         while message[digit_in_sutom_number].isnumeric():
             s_number = s_number + message[digit_in_sutom_number]
             digit_in_sutom_number += 1
-        sutom_try.sutom_number = s_number
-        # -> number of try (result is different than n/n or -/n)
-        # TODO compare char with [1,2,3,4,5,6,7,8,9,-] array
+        sutom_record.sutom_number = s_number
+
         if (
             (
                 not (
@@ -69,26 +73,32 @@ def message_handler_validator(message_d: discord.message, sutom_try: SutomTry):
             or (not message[3 + digit_in_sutom_number].isnumeric())
         ):
             return (-1, None)
-        sutom_try.number_of_try = message[1 + digit_in_sutom_number]
-        sutom_try.word_len = message[3 + digit_in_sutom_number]
+
+        # -> number of try
+        sutom_record.number_of_try = message[1 + digit_in_sutom_number]
+
         # -> game time
-        if (len(message.partition("\n")[0])) < 19:
-            sutom_try.time_to_guess = "00:00:00"
-            return (1, sutom_try)
+        # --> no time in message
+        if not message.contains(":"):
+            sutom_record.time_to_guess = 0
+            return (1, sutom_record)
+
+        # --> time in message with hour (1h00:00 or 10h:00:00)
         if message.partition("\n")[0].count("h") == 1:
-            sutom_try.time_to_guess = sutom_date_formater(
+            tmp_str_time_to_guess = sutom_date_formater(
                 message[5 + digit_in_sutom_number : 13 + digit_in_sutom_number]
             )
         else:
-            sutom_try.time_to_guess = (
+            # --> time in message without hour (00:00)
+            tmp_str_time_to_guess = (
                 "00:" + message[5 + digit_in_sutom_number : 10 + digit_in_sutom_number]
             )
-        # TODO: depending if 1h00:00 or 10h:00:00 the \n is taken
-        sutom_try.time_to_guess = sutom_try.time_to_guess.strip()
-        return (2, sutom_try)
+        # Strip: depending if 1h00:00 or 10h:00:00 the \n is taken
+        sutom_record.time_to_guess = timestamp_to_second(tmp_str_time_to_guess.strip())
+        return (2, sutom_record)
     except IndexError as ie:
         print(
-            f"Error in MESSAGE_HANDLER_VALIDATOR.\nMessage is {message} \nwith exception{ie}"
+            f"Error in sutom_message_validator.\nMessage is {message} \nwith exception{ie}"
         )
         return (-1, None)
 
@@ -105,18 +115,26 @@ def print_status(client, SUTOM_CHANNEL, SUTOM_GUILD):
         for guild in client.guilds:
             if str(guild.id) == str(SUTOM_GUILD):
                 break
-        gen_channel = guild.get_channel(int(SUTOM_CHANNEL))
+        channel_sutom = guild.get_channel(int(SUTOM_CHANNEL))
+        if channel_sutom is None:
+            print(
+                "Error while getting the Sutom channel. Please check the channel ID in the .env file. You can copy a channel's ID by enabeling the dev mode in discord and right\
+            clicking on the channel."
+            )
+            sys.exit(2)
         l = client.latency
         l = str(l).partition(".")[2]
         l = l[0:3] + "ms"
         print(l)
-        await gen_channel.send(f"Online 🤖 V2.2 (C-DEL edition). {l}")
-        print("Connected to : ", guild.name)
+        await channel_sutom.send(f"Online 🤖 . {l}")
+        print(f"Ready. Connected to : {guild.name} in {l}")
 
 
 def main(argv):
 
     load_dotenv()
+    TOKEN, SUTOM_CHANNEL, SUTOM_GUILD = None, None, None
+    client = None
 
     # Argument and python call handeling
 
@@ -143,16 +161,22 @@ def main(argv):
             SUTOM_CHANNEL = os.getenv("SUTOM_CHANNEL_ID")
             SUTOM_GUILD = os.getenv("MAGENOIR_GUILD_ID")
 
-    if not set_mode:
-        print(HELP_MSG)
+    if TOKEN is None or SUTOM_CHANNEL is None or SUTOM_GUILD is None:
+        print("Environment variables not set. Please check .env-example file.")
         sys.exit(2)
 
-    # Discord Intents setup
+    if not set_mode:
+        print(HELP_MSG)
+        sys.exit()
 
+    # Discord Intents setup
     intents = discord.Intents.all()
-    # intents.messages = True
-    # intents.message_content = True
     client = discord.Client(intents=intents)
+    if client is None or client.guilds is None:
+        print(
+            "Error while creating discord.Client. Enable trace with discord.Client(intents=intents, enable_debug_events=True)"
+        )
+        sys.exit(2)
 
     # Print latency and connected Server
     print_status(client, SUTOM_CHANNEL, SUTOM_GUILD)
@@ -164,40 +188,51 @@ def main(argv):
                 break
 
         channel_sutom = guild.get_channel(int(SUTOM_CHANNEL))
+        if channel_sutom is None:
+            print(
+                "Error while getting the Sutom channel. Please check the channel ID in the .env file. You can copy a channel's ID by enabeling the dev mode in discord and right\
+            clicking on the channel."
+            )
+            sys.exit(2)
 
-        # To avoid the bot reply to himself in an infinite loop
+        # To avoid the bot replying to himself in an infinite loop
         if message.author == client.user:
             return
 
         try:
             # TODO: partion(" ")[0] in [sutom, SUTOM, ...] + if # missing, message too short (should be partition selector instead of slicing)
-
             # SUTOM message
             if message.content[0:6] == "#SUTOM" or message.content[0:6] == "#sutom":
 
-                print("Sutom detected")
+                print(
+                    f"Sutom message detected from {str(message.author.display_name)} at {str(datetime.now())}"
+                )
 
-                sutom_try = SutomTry()
+                # TODO COPILOT : in progress, use SutomRecord class
+                sutom_record = SutomRecord()
 
-                res = message_handler_validator(message, sutom_try)
+                res = sutom_message_validator(
+                    message.author.id, message.content, sutom_record
+                )
                 status = res[0]
-                sutom_try = res[1]
+                sutom_record = res[1]
 
                 if status == 1:
                     await channel_sutom.send(
-                        f"N'oublie pas d'activer le compteur de temps dans les paramètres du jeu 👀🕜"
+                        "N'oublie pas d'activer le compteur de temps dans les paramètres du jeu 👀🕜"
                     )
 
                 if status == -1:
-                    return
+                    await channel_sutom.send(
+                        "#SUTOM message mal formé! Template : #SUTOM #999 X/6 (1h13m37s)"
+                    )
+                    sys.exit(2)
 
-                sutom_try.date_of_try = str(datetime.now().date())
+                print(
+                    f"Status {status} and try {sutom_record} from {message.author.display_name}"
+                )
 
-                print(f"|Status {status} and try {sutom_try}|")
-
-                sutom_try.time_to_guess = timestamp_to_second(sutom_try.time_to_guess)
-
-                status = rd.write_results(FILE_RESULTS_PATH, sutom_try)
+                status = rd.write_results(FILE_RESULTS_PATH, sutom_record)
                 if status == -1:
                     await channel_sutom.send(
                         f"Hey, {message.author.mention}, t'as déjà un résultat enregistré pour aujourd'hui"
@@ -208,23 +243,10 @@ def main(argv):
                         f"Résultat enregistré, {message.author.mention}."
                     )
 
-            # .takeda
-            if message.content[0:7] == ".takeda":
-                await channel_sutom.send(file=discord.File("takeda.png"))
-                return
-
-            # .graph
-            if message.content[0:7] == ".graph":
-                await rd.send_results_command(
-                    (".me", "", ""), client, channel_sutom, message.author.id
-                )
-                await channel_sutom.send(file=discord.File("graph.png"))
-                return
-
-            # .other command
+            # .command
             if message.content[0] == ".":
-
                 await rd.send_results_command(
+                    # TODO ------------- Je suis ici
                     message.content.partition(" "),
                     client,
                     channel_sutom,

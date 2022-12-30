@@ -1,5 +1,6 @@
 import json
-from SutomTry import SutomTry, FILE_RESULTS_PATH
+from SutomRecord import SutomRecord, FILE_RESULTS_PATH
+from discord import File
 from datetime import timedelta, datetime
 from operator import itemgetter
 import textwrap
@@ -21,9 +22,7 @@ LEET = """```
 """
  Returns -1 if record for the day and the user already exist
 """
-
-
-def write_results(file_path: str, sutom_results: SutomTry) -> int:
+def write_results(file_path: str, sutom_results: SutomRecord) -> int:
     try:
         with open(file_path, "r") as f:
             data = json.load(f)
@@ -41,7 +40,6 @@ def write_results(file_path: str, sutom_results: SutomTry) -> int:
     record["user_id"] = sutom_results.user_id
     record["sutom_number"] = sutom_results.sutom_number
     record["number_of_try"] = sutom_results.number_of_try
-    record["word_len"] = sutom_results.word_len
     record["time_to_guess"] = sutom_results.time_to_guess
     record["date_of_try"] = sutom_results.date_of_try
 
@@ -54,23 +52,22 @@ def write_results(file_path: str, sutom_results: SutomTry) -> int:
 
 def read_results(file_path) -> dict:
     try:
-        file_result = []
+        all_records = []
         with open(file_path, "r") as f:
             data = json.load(f)
             for r in data:
-                data_result = SutomTry(
+                read_record = SutomRecord(
                     r["user_id"],
                     r["sutom_number"],
                     r["number_of_try"],
-                    r["word_len"],
                     r["date_of_try"],
                     r["time_to_guess"],
                 )
-                file_result.append(data_result)
+                all_records.append(read_record)
 
     except json.JSONDecodeError:
         data = []
-    return file_result
+    return all_records
 
 
 def compute_avg_time_from_str_timestamp(new_time: int, avg_time: int) -> str:
@@ -143,15 +140,15 @@ def get_results_by_date(today: bool, data, client) -> str:
             try:
                 response += f"**{(client.get_user(player.user_id)).display_name}**   \n"
             except AttributeError:
-                response += f"**{player.user_id}** (did he/she left the server ? 👀) \n"
+                response += f"**{player.user_id}** (est ce qu'il/elle a quitté le serveur ? 👀) \n"
             response += f"\t{player.number_of_try}/6 in {str(timedelta(seconds=(player.time_to_guess)))}\n"
             response += "\n"
     if response:
         return response
-    return "No results 😒"
+    return "Pas de résultat 😒"
 
 
-def contruct_result_message(player, client) -> str:
+def contruct_result_message(player, client, graph=False) -> str:
     avg_time = "00:00:00"
     response = ""
     # Possible only if called by .me
@@ -160,7 +157,7 @@ def contruct_result_message(player, client) -> str:
     try:
         response += f"**{(client.get_user(player['user_id'])).display_name}**   \n"
     except AttributeError:
-        response += f"{(player['user_id'])} (did he/she left the server ? 👀) \n"
+        response += f"{(player['user_id'])} (est ce qu'il/elle a quitté le serveur ? 👀) \n"
     response += f"\t\t{player['one_try']} : 1/6\n"
     response += f"\t\t{player['two_try']} : 2/6\n"
     response += f"\t\t{player['three_try']} : 3/6\n"
@@ -168,34 +165,35 @@ def contruct_result_message(player, client) -> str:
     response += f"\t\t{player['five_try']} : 5/6\n"
     response += f"\t\t{player['six_try']} : 6/6\n"
     response += f"\t\t{player['failed']} : -/6\n"
-    response += f"\t\tAverage score : {player['avg_score']:.2f}\n"
+    response += f"\t\tScore moyen : {player['avg_score']:.2f}\n"
     avg_time = str(player["avg_time"]).partition(".")[0]
-    response += f"\t\tAverage time to guess : 🕜 {avg_time} 🕜\n"
-
-    plt.bar(
+    response += f"\t\tTemps moyen : 🕜 {avg_time} 🕜\n"
+    if graph:
+        plt.bar(
         [1, 2, 3, 4, 5, 6],
-        height=[
-            player["one_try"],
-            player["two_try"],
-            player["three_try"],
-            player["four_try"],
-            player["five_try"],
-            player["six_try"],
-        ],
-        color="red",
-    )
-    plt.xticks([1, 2, 3, 4, 5, 6], [1, 2, 3, 4, 5, 6])
-    plt.xlabel("Score")
-    plt.savefig("graph.png")
+            height=[
+                player["one_try"],
+                player["two_try"],
+                player["three_try"],
+                player["four_try"],
+                player["five_try"],
+                player["six_try"],
+            ],
+            color="red",
+        )
+        plt.xticks([1, 2, 3, 4, 5, 6], [1, 2, 3, 4, 5, 6])
+        plt.xlabel("Score")
+        plt.savefig("graph.png")
 
     return response
 
-
-# TODO: record every game in second and compute the average based in these instead of recomputing the mean
-def compute_top(client, data: dict, top_3=False, me=False) -> str:
+def compute_top(client, data: dict, top_3=False, me=None, graph=False) -> str:
     response = "🏆 Here's the scoreboard 🏆\n"
     top = []
+
     for record in data:
+
+        # Adding new user to the top list
         if not any(d.get("user_id", None) == record.user_id for d in top):
             top.append(
                 {
@@ -208,29 +206,30 @@ def compute_top(client, data: dict, top_3=False, me=False) -> str:
                     "six_try": 0,
                     "failed": 0,
                     "avg_time": record.time_to_guess,
+                    "non_zero_avg_time": 0,
                 }
             )
+
+            # Adding his first try
             top[len(top) - 1][return_string_index(record.number_of_try)] = 1
+            if record.time_to_guess == 0:
+                top[len(top) - 1]["non_zero_avg_time"] = 1
+
         else:
+            # Adding his try  ( top[index_of_user_id] )  to the top list
             index_of_user_id = next(
                 (i for i, item in enumerate(top) if item["user_id"] == record.user_id),
                 None,
             )
+
+            index_of_user_id = int(index_of_user_id)
             top[index_of_user_id][return_string_index(record.number_of_try)] += 1
             if record.time_to_guess != 0:
                 top[index_of_user_id]["avg_time"] += record.time_to_guess
 
     # Compute average time based on total time in each player
     for player in top:
-        nb_ocr = (
-            player["one_try"]
-            + player["two_try"]
-            + player["three_try"]
-            + player["four_try"]
-            + player["five_try"]
-            + player["six_try"]
-        )
-        player["avg_time"] = compute_avg_time(nb_ocr, player["avg_time"])
+        player["avg_time"] = compute_avg_time(player["non_zero_avg_time"], player["avg_time"])
 
     # Sort by each type of score
     # top = sorted(top, key=itemgetter("one_try", "two_try", "three_try", "four_try", "five_try", "six_try"), reverse=True)
@@ -243,7 +242,7 @@ def compute_top(client, data: dict, top_3=False, me=False) -> str:
         if type(me) == str:
             me = int(me[2:-1])
         return contruct_result_message(
-            next((p for p in top if p["user_id"] == me), None), client
+            next((p for p in top if p["user_id"] == me), None), client, graph
         )
 
     i = 0
@@ -256,7 +255,7 @@ def compute_top(client, data: dict, top_3=False, me=False) -> str:
             response += "🥉"
         if i not in [0, 1, 2]:
             response += f"{i+1}. "
-        response += contruct_result_message(player, client)
+        response += contruct_result_message(player, client, graph)
         i += 1
         if top_3 and i > 2:
             break
@@ -271,12 +270,12 @@ def print_console_results(file_path: str):
 
 
 # TODO: number of game played, .player [player_name]
-async def send_results_command(command: str, client, channel_sutom, me=False):
+async def send_results_command(command: str, client, channel_sutom, me=None):
     arg = ""
     if command[2] != "":
         arg = command[2]
     command = command[0]
-    commands = textwrap.dedent(
+    help = textwrap.dedent(
         """```
      .h or .help    Aide\n \
     .top            Top 3 des meilleurs joueurs par nombre de
@@ -286,44 +285,65 @@ async def send_results_command(command: str, client, channel_sutom, me=False):
     .yesterday      Liste des parties d'hier\n \
     .me             Mes stats\n \
     .player @player Stats du joueur\n \
-    .graph          Affiche un graphique des parties jouées \
+    .graph          Affiche un graph des parties jouées \
     .takeda         takeda\n \
     .leet           is it ? 👾```"""
     )
     if command == ".h" or command == ".help":
-        await channel_sutom.send(commands)
+        await channel_sutom.send(help)
+        return
     if command == ".top":
         await channel_sutom.send(
             compute_top(client, read_results(FILE_RESULTS_PATH), True)
         )
+        return
     if command == ".today":
         await channel_sutom.send(
             get_results_by_date(True, read_results(FILE_RESULTS_PATH), client)
         )
+        return
     if command == ".list":
         await channel_sutom.send(compute_top(client, read_results(FILE_RESULTS_PATH)))
+        return
     if command == ".yesterday":
         await channel_sutom.send(
             get_results_by_date(False, read_results(FILE_RESULTS_PATH), client)
         )
+        return
     if command == ".me":
         await channel_sutom.send(
             compute_top(client, read_results(FILE_RESULTS_PATH), False, me)
         )
+        return
     if command == ".player":
         await channel_sutom.send(
             compute_top(client, read_results(FILE_RESULTS_PATH), False, arg)
         )
+        return
+    if command == ".graph":
+        await channel_sutom.send(
+            compute_top(client, read_results(FILE_RESULTS_PATH), False, arg, True)
+        )
+        await channel_sutom.send(file=File("graph.png"))
+        return
     if command == ".status":
         await channel_sutom.send(f"Time : {datetime.now()} ping : {client.latency}")
+        return
     if command == ".leet":
         if datetime.now().hour == 13 and datetime.now().minute == 37:
             await channel_sutom.send(LEET)
+            return
         else:
             await channel_sutom.send("It's not leet... 🤖")
+            return
     # TODO : Vrai systeme d'un joker/semaine (ne modifie pas la moyenne) et pennaliser les joueurs qui ne postent pas tous les jours
     if command == ".joker":
         await channel_sutom.send("ses luient 🤡 🃏")
+        return
+    if command == ".takeda":
+        await channel_sutom.send(file=File("takeda.png"))
+        return
     await channel_sutom.send(
-        f"Commande non valide. Liste des commandes (.h ou .help) :\n{commands}"
+        f"Commande non valide 🙄 Liste des commandes .h ou .help\n"
     )
+    return
