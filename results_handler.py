@@ -1,6 +1,8 @@
 import json
 from SutomRecord import SutomRecord, FILE_RESULTS_PATH
+from leet import LEET
 from discord import File
+import random
 from datetime import timedelta, datetime
 from operator import itemgetter
 import textwrap
@@ -9,15 +11,6 @@ from dotenv import load_dotenv
 import os
 
 import matplotlib.pyplot as plt
-
-LEET = """```
-.__                 __   
-|  |   ____   _____/  |_ 
-|  | _/ __ \_/ __ \   __\\
-|  |_\  ___/\  ___/|  |  
-|____/\___  >\___  >__|  
-          \/     \/      
-```"""
 
 """
  Returns -1 if record for the day and the user already exist
@@ -51,8 +44,8 @@ def write_results(file_path: str, sutom_results: SutomRecord) -> int:
 
 
 def read_results(file_path) -> dict:
+    all_records = []
     try:
-        all_records = []
         with open(file_path, "r") as f:
             data = json.load(f)
             for r in data:
@@ -66,7 +59,8 @@ def read_results(file_path) -> dict:
                 all_records.append(read_record)
 
     except json.JSONDecodeError:
-        data = []
+        print("RESULTS FILE IS CORRUPTED")
+        all_records = []
     return all_records
 
 
@@ -87,7 +81,6 @@ def compute_avg_time_from_str_timestamp(new_time: int, avg_time: int) -> str:
 
 
 def compute_avg_time(number_ocr: int, total_time: int) -> str:
-    # @src https://stackoverflow.com/questions/12033905/using-python-to-create-an-average-out-of-a-list-of-times
     return str(timedelta(seconds=(total_time / number_ocr)))
 
     """ args : {"user_id": user_id, "one_try": 0, "two_try": 0, "three_try": 0, "four_try": 0, "five_try": 0, "six_try": 0, "failed": 0, "avg_time": 0}
@@ -187,7 +180,7 @@ def contruct_result_message(player, client, graph=False) -> str:
 
     return response
 
-def compute_top(client, data: dict, top_3=False, me=None, graph=False) -> str:
+def compute_top(client, data, top_3=False, me=None, graph=False) -> str:
     response = "🏆 Here's the scoreboard 🏆\n"
     top = []
 
@@ -331,7 +324,8 @@ async def send_results_command(command: str, client, channel_sutom, me=None):
         return
     if command == ".leet":
         if datetime.now().hour == 13 and datetime.now().minute == 37:
-            await channel_sutom.send(LEET)
+            leet_index = random.randint(1, 3)
+            await channel_sutom.send(LEET[leet_index])
             return
         else:
             await channel_sutom.send("It's not leet... 🤖")
