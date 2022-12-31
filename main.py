@@ -33,6 +33,7 @@ def timestamp_to_second(timestamp: str) -> int:
     seconds = (3600 * h) + (60 * m) + s
     return seconds
 
+
 # TODO : use this
 def print_if_last_commit():
     repo = git.Repo(search_parent_directories=True, path=".")
@@ -139,6 +140,7 @@ def main(argv):
     # Argument and python call handeling
 
     set_mode = False
+    debug_mode = False
     try:
         opts, args = getopt.getopt(argv, "htr", ["test", "run"])
     except getopt.GetoptError:
@@ -151,6 +153,7 @@ def main(argv):
         elif opt in ("-t", "--test"):
             print("Test mode")
             set_mode = True
+            debug_mode = True
             TOKEN = os.getenv("DISCORD_TOKEN_TEST")
             SUTOM_CHANNEL = os.getenv("TEST_CHANNEL_ID")
             SUTOM_GUILD = os.getenv("TEST_GUILD_ID")
@@ -179,7 +182,8 @@ def main(argv):
         sys.exit(2)
 
     # Print latency and connected Server
-    print_status(client, SUTOM_CHANNEL, SUTOM_GUILD)
+    if debug_mode:
+        print_status(client, SUTOM_CHANNEL, SUTOM_GUILD)
 
     @client.event
     async def on_message(message):
@@ -208,7 +212,6 @@ def main(argv):
                     f"Sutom message detected from {str(message.author.display_name)} at {str(datetime.now())}"
                 )
 
-                # TODO COPILOT : in progress, use SutomRecord class
                 sutom_record = SutomRecord()
 
                 res = sutom_message_validator(
@@ -246,8 +249,9 @@ def main(argv):
             # .command
             if message.content[0] == ".":
                 await rd.send_results_command(
-                    # TODO ------------- Je suis ici
-                    message.content.partition(" "),
+                    # Envoie un tuple dans un str -> Exception deballage tuple
+                    # message.content.partition(" "),
+                    message.content.partition(" ")[0],
                     client,
                     channel_sutom,
                     message.author.id,

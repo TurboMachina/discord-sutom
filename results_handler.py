@@ -15,6 +15,8 @@ import matplotlib.pyplot as plt
 """
  Returns -1 if record for the day and the user already exist
 """
+
+
 def write_results(file_path: str, sutom_results: SutomRecord) -> int:
     try:
         with open(file_path, "r") as f:
@@ -81,8 +83,10 @@ def compute_avg_time_from_str_timestamp(new_time: int, avg_time: int) -> str:
 
 
 def compute_avg_time(number_ocr: int, total_time: int) -> str:
-    return str(timedelta(seconds=(total_time / number_ocr)))
-
+    try:
+        return str(timedelta(seconds=(total_time / number_ocr)))
+    except ZeroDivisionError:
+        return "00:00:00"
     """ args : {"user_id": user_id, "one_try": 0, "two_try": 0, "three_try": 0, "four_try": 0, "five_try": 0, "six_try": 0, "failed": 0, "avg_time": 0}
     """
 
@@ -150,7 +154,9 @@ def contruct_result_message(player, client, graph=False) -> str:
     try:
         response += f"**{(client.get_user(player['user_id'])).display_name}**   \n"
     except AttributeError:
-        response += f"{(player['user_id'])} (est ce qu'il/elle a quitté le serveur ? 👀) \n"
+        response += (
+            f"{(player['user_id'])} (est ce qu'il/elle a quitté le serveur ? 👀) \n"
+        )
     response += f"\t\t{player['one_try']} : 1/6\n"
     response += f"\t\t{player['two_try']} : 2/6\n"
     response += f"\t\t{player['three_try']} : 3/6\n"
@@ -160,10 +166,10 @@ def contruct_result_message(player, client, graph=False) -> str:
     response += f"\t\t{player['failed']} : -/6\n"
     response += f"\t\tScore moyen : {player['avg_score']:.2f}\n"
     avg_time = str(player["avg_time"]).partition(".")[0]
-    response += f"\t\tTemps moyen : 🕜 {avg_time} 🕜\n"
+    response += f"\t\tTemps moyen : 🕜 {avg_time} 🕜\n\n"
     if graph:
         plt.bar(
-        [1, 2, 3, 4, 5, 6],
+            [1, 2, 3, 4, 5, 6],
             height=[
                 player["one_try"],
                 player["two_try"],
@@ -180,8 +186,9 @@ def contruct_result_message(player, client, graph=False) -> str:
 
     return response
 
+
 def compute_top(client, data, top_3=False, me=None, graph=False) -> str:
-    response = "🏆 Here's the scoreboard 🏆\n"
+    response = "🏆 TABLEAU DES SCORES 🏆\n"
     top = []
 
     for record in data:
@@ -205,7 +212,7 @@ def compute_top(client, data, top_3=False, me=None, graph=False) -> str:
 
             # Adding his first try
             top[len(top) - 1][return_string_index(record.number_of_try)] = 1
-            if record.time_to_guess == 0:
+            if record.time_to_guess != 0:
                 top[len(top) - 1]["non_zero_avg_time"] = 1
 
         else:
@@ -222,7 +229,9 @@ def compute_top(client, data, top_3=False, me=None, graph=False) -> str:
 
     # Compute average time based on total time in each player
     for player in top:
-        player["avg_time"] = compute_avg_time(player["non_zero_avg_time"], player["avg_time"])
+        player["avg_time"] = compute_avg_time(
+            player["non_zero_avg_time"], player["avg_time"]
+        )
 
     # Sort by each type of score
     # top = sorted(top, key=itemgetter("one_try", "two_try", "three_try", "four_try", "five_try", "six_try"), reverse=True)
@@ -232,7 +241,7 @@ def compute_top(client, data, top_3=False, me=None, graph=False) -> str:
     top = sorted(top, key=itemgetter("avg_score"))
 
     if me:
-        if type(me) == str:
+        if type(me) == str:  # Lance une Exception si non-existant
             me = int(me[2:-1])
         return contruct_result_message(
             next((p for p in top if p["user_id"] == me), None), client, graph
@@ -264,10 +273,13 @@ def print_console_results(file_path: str):
 
 # TODO: number of game played, .player [player_name]
 async def send_results_command(command: str, client, channel_sutom, me=None):
+
     arg = ""
+
     if command[2] != "":
         arg = command[2]
     command = command[0]
+
     help = textwrap.dedent(
         """```
      .h or .help    Aide\n \
@@ -282,62 +294,77 @@ async def send_results_command(command: str, client, channel_sutom, me=None):
     .takeda         takeda\n \
     .leet           is it ? 👾```"""
     )
+
     if command == ".h" or command == ".help":
         await channel_sutom.send(help)
         return
+
     if command == ".top":
         await channel_sutom.send(
             compute_top(client, read_results(FILE_RESULTS_PATH), True)
         )
         return
+
     if command == ".today":
         await channel_sutom.send(
             get_results_by_date(True, read_results(FILE_RESULTS_PATH), client)
         )
         return
+
     if command == ".list":
         await channel_sutom.send(compute_top(client, read_results(FILE_RESULTS_PATH)))
         return
+
     if command == ".yesterday":
         await channel_sutom.send(
             get_results_by_date(False, read_results(FILE_RESULTS_PATH), client)
         )
         return
+
     if command == ".me":
         await channel_sutom.send(
             compute_top(client, read_results(FILE_RESULTS_PATH), False, me)
         )
         return
+
     if command == ".player":
+        print(arg)
         await channel_sutom.send(
-            compute_top(client, read_results(FILE_RESULTS_PATH), False, arg)
+            "Commande non fonctionnelle : désactivée"
+            # compute_top(client, read_results(FILE_RESULTS_PATH), False, arg)
         )
         return
+
     if command == ".graph":
         await channel_sutom.send(
-            compute_top(client, read_results(FILE_RESULTS_PATH), False, arg, True)
+            # compute_top(client, read_results(FILE_RESULTS_PATH), False, arg, True)
+            "Commande non fonctionnelle : désactivée"
         )
         await channel_sutom.send(file=File("graph.png"))
         return
+
     if command == ".status":
         await channel_sutom.send(f"Time : {datetime.now()} ping : {client.latency}")
         return
+
     if command == ".leet":
         if datetime.now().hour == 13 and datetime.now().minute == 37:
-            leet_index = random.randint(1, 3)
+            leet_index = random.randint(0, 3)
             await channel_sutom.send(LEET[leet_index])
             return
+
         else:
             await channel_sutom.send("It's not leet... 🤖")
             return
+
     # TODO : Vrai systeme d'un joker/semaine (ne modifie pas la moyenne) et pennaliser les joueurs qui ne postent pas tous les jours
     if command == ".joker":
         await channel_sutom.send("ses luient 🤡 🃏")
         return
+
     if command == ".takeda":
         await channel_sutom.send(file=File("takeda.png"))
         return
-    await channel_sutom.send(
-        f"Commande non valide 🙄 Liste des commandes .h ou .help\n"
-    )
+
+    await channel_sutom.send(f"Commande non valide 🙄 Liste des commandes .h ou .help\n")
     return
