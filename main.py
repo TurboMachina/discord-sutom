@@ -2,6 +2,7 @@ import os, sys, getopt
 import discord
 from dotenv import load_dotenv
 from datetime import datetime
+from datetime import timedelta
 import git
 
 from SutomRecord import SutomRecord, FILE_RESULTS_PATH
@@ -24,6 +25,10 @@ HELP_MSG = "main.py -t --test / -r --run"
 
 https://sutom.nocle.fr
 """
+
+# Return the Sutom game number for the day
+def return_sutom_number() -> int:
+    return ((datetime.now() - datetime(2022, 1, 7)).days)
 
 
 def timestamp_to_second(timestamp: str) -> int:
@@ -61,7 +66,7 @@ def sutom_message_validator(message, author, sutom_record: SutomRecord):
         while message[digit_in_sutom_number].isnumeric():
             s_number = s_number + message[digit_in_sutom_number]
             digit_in_sutom_number += 1
-        sutom_record.sutom_number = s_number
+        sutom_record.sutom_number = return_sutom_number()
 
         if (
             (
@@ -243,7 +248,7 @@ def main(argv):
 
                 if status == 0:
                     await channel_sutom.send(
-                        f"Résultat enregistré, {message.author.mention}."
+                        f"Résultat enregistré, {message.author.mention} 🤖 Sutom n°{sutom_record.sutom_number} en {sutom_record.number_of_try}/6 essais en {(str(timedelta(seconds=sutom_record.time_to_guess))).partition('.')[0]}"
                     )
 
             # .command
