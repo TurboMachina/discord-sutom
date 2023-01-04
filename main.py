@@ -195,8 +195,8 @@ def main(argv):
         sys.exit(2)
 
     # Print latency and connected Server
-    #if debug_mode:
-    print_status(client, SUTOM_CHANNEL, SUTOM_GUILD)
+    if debug_mode:
+        print_status(client, SUTOM_CHANNEL, SUTOM_GUILD)
 
     @client.event
     async def on_message(message):
