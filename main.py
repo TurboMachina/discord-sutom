@@ -28,7 +28,7 @@ https://sutom.nocle.fr
 
 # Return the Sutom game number for the day
 def return_sutom_number() -> int:
-    return ((datetime.now() - datetime(2022, 1, 7)).days)
+    return (datetime.now() - datetime(2022, 1, 7)).days
 
 
 def timestamp_to_second(timestamp: str) -> int:
@@ -39,15 +39,17 @@ def timestamp_to_second(timestamp: str) -> int:
     return seconds
 
 
-# TODO : use this
-def print_if_last_commit():
+def check_if_last_commit():
     repo = git.Repo(search_parent_directories=True, path=".")
     github_head_commit = repo.head.commit
+    github_head_commit = str(github_head_commit).strip()
     current_commit = repo.git.rev_parse("HEAD")
+    current_commit = str(current_commit).strip()
     print("Last commit: " + str(github_head_commit))
     print("Current commit: " + str(current_commit))
     # display if the current commit is the last one
     print("Is last commit: " + str(github_head_commit == current_commit))
+    return (str(github_head_commit == current_commit), str(github_head_commit), str(current_commit))
 
 
 def sutom_message_validator(message, author, sutom_record: SutomRecord):
@@ -85,7 +87,7 @@ def sutom_message_validator(message, author, sutom_record: SutomRecord):
 
         # -> game time
         # --> no time in message
-        if not message.contains(":"):
+        if not (':' in message.partition("\n")[0]):
             sutom_record.time_to_guess = 0
             return (1, sutom_record)
 
@@ -100,6 +102,8 @@ def sutom_message_validator(message, author, sutom_record: SutomRecord):
                 "00:" + message[5 + digit_in_sutom_number : 10 + digit_in_sutom_number]
             )
         # Strip: depending if 1h00:00 or 10h:00:00 the \n is taken
+        print(tmp_str_time_to_guess)
+        print(tmp_str_time_to_guess.strip())
         sutom_record.time_to_guess = timestamp_to_second(tmp_str_time_to_guess.strip())
         return (2, sutom_record)
     except IndexError as ie:
@@ -132,7 +136,11 @@ def print_status(client, SUTOM_CHANNEL, SUTOM_GUILD):
         l = str(l).partition(".")[2]
         l = l[0:3] + "ms"
         print(l)
-        await channel_sutom.send(f"Online 🤖 . {l}")
+        is_last_commit, last_commit, current_commit = check_if_last_commit()
+        if last_commit:
+            await channel_sutom.send(f"Online 🤖 - {l}\nGit repo à jour : {is_last_commit} 📚")
+        else:
+            await channel_sutom.send(f"Online 🤖 - {l}\nGit repo pas à jour ⚠\nLast commit : {last_commit}\nCurrent commit : {current_commit}")
         print(f"Ready. Connected to : {guild.name} in {l}")
 
 
@@ -211,8 +219,7 @@ def main(argv):
         try:
             # TODO: partion(" ")[0] in [sutom, SUTOM, ...] + if # missing, message too short (should be partition selector instead of slicing)
             # SUTOM message
-            if message.content[0:6] == "#SUTOM" or message.content[0:6] == "#sutom":
-
+            if (message.content[0:6]).lower() == "#sutom":
                 print(
                     f"Sutom message detected from {str(message.author.display_name)} at {str(datetime.now())}"
                 )
@@ -220,7 +227,7 @@ def main(argv):
                 sutom_record = SutomRecord()
 
                 res = sutom_message_validator(
-                    message.author.id, message.content, sutom_record
+                    message.content, message.author.id, sutom_record
                 )
                 status = res[0]
                 sutom_record = res[1]
@@ -247,8 +254,11 @@ def main(argv):
                     )
 
                 if status == 0:
+                    response = f"Résultat enregistré, {message.author.mention} 🤖 Sutom n°{sutom_record.sutom_number} en {sutom_record.number_of_try}/6 essais"
+                    if sutom_record.time_to_guess != 0:
+                        response += f" en {(str(timedelta(seconds=sutom_record.time_to_guess))).partition('.')[0]}"
                     await channel_sutom.send(
-                        f"Résultat enregistré, {message.author.mention} 🤖 Sutom n°{sutom_record.sutom_number} en {sutom_record.number_of_try}/6 essais en {(str(timedelta(seconds=sutom_record.time_to_guess))).partition('.')[0]}"
+                        response
                     )
 
             # .command

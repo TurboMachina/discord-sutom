@@ -7,9 +7,6 @@ from datetime import timedelta, datetime
 from operator import itemgetter
 import textwrap
 
-from dotenv import load_dotenv
-import os
-
 import matplotlib.pyplot as plt
 
 """
@@ -41,7 +38,7 @@ def write_results(file_path: str, sutom_results: SutomRecord) -> int:
     data.append(record)
 
     with open(file_path, "w") as f:
-        json.dump(data, f)
+        json.dump(data, f, indent=4)
     return 0
 
 
@@ -84,6 +81,8 @@ def compute_avg_time_from_str_timestamp(new_time: int, avg_time: int) -> str:
 
 def compute_avg_time(number_ocr: int, total_time: int) -> str:
     try:
+        print("total_time", total_time)
+        print("number_ocr", number_ocr)
         return str(timedelta(seconds=(total_time / number_ocr)))
     except ZeroDivisionError:
         return "00:00:00"
@@ -187,12 +186,19 @@ def contruct_result_message(player, client, graph=False) -> str:
     return response
 
 
-def compute_top(client, data, top_3=False, me=None, graph=False) -> str:
+def compute_top(client, data, top_3=False, me=None, graph=False, time_delta=-1) -> str:
     response = "🏆 TABLEAU DES SCORES 🏆\n"
     top = []
 
     for record in data:
-
+        # Skip the record if it's from more than 30 days
+        if time_delta >= 0:
+            date_format = "%Y-%m-%d"
+            a = datetime.strptime(record.date_of_try, date_format)
+            b = datetime.strptime(str(datetime.now().date()), date_format)
+            print((b - a).days)
+            if (b - a).days > time_delta:
+                continue
         # Adding new user to the top list
         if not any(d.get("user_id", None) == record.user_id for d in top):
             top.append(
@@ -226,6 +232,7 @@ def compute_top(client, data, top_3=False, me=None, graph=False) -> str:
             top[index_of_user_id][return_string_index(record.number_of_try)] += 1
             if record.time_to_guess != 0:
                 top[index_of_user_id]["avg_time"] += record.time_to_guess
+                top[index_of_user_id]["non_zero_avg_time"] += 1
 
     # Compute average time based on total time in each player
     for player in top:
@@ -276,10 +283,11 @@ async def send_results_command(command: str, client, channel_sutom, me=None):
 
     arg = ""
 
-    if command[2] != "":
+    # Casse le code en fonction du message parsé
+    """if command[2] != "":
         arg = command[2]
-    command = command[0]
-
+    command = command[0] """
+    print(command)
     help = textwrap.dedent(
         """```
      .h or .help    Aide\n \
@@ -288,6 +296,8 @@ async def send_results_command(command: str, client, channel_sutom, me=None):
     .list           Liste tous les joueurs et leurs stats\n \
     .today          Liste des parties d'aujourd'hui\n \
     .yesterday      Liste des parties d'hier\n \
+    .week           Liste des parties de la semaine\n \
+    .month          Liste des parties du mois\n \
     .me             Mes stats\n \
     .player @player Stats du joueur\n \
     .graph          Affiche un graph des parties jouées \
@@ -321,6 +331,18 @@ async def send_results_command(command: str, client, channel_sutom, me=None):
         )
         return
 
+    if command == ".month":
+        await channel_sutom.send(
+            compute_top(client, read_results(FILE_RESULTS_PATH), False, None, False, 30)
+        )
+        return
+
+    if command == ".week":
+        await channel_sutom.send(
+            compute_top(client, read_results(FILE_RESULTS_PATH), False, None, False, 7)
+        )
+        return
+
     if command == ".me":
         await channel_sutom.send(
             compute_top(client, read_results(FILE_RESULTS_PATH), False, me)
@@ -344,7 +366,9 @@ async def send_results_command(command: str, client, channel_sutom, me=None):
         return
 
     if command == ".status":
-        await channel_sutom.send(f"Time : {datetime.now()} ping : {client.latency}")
+        latency = str(client.latency).partition(".")[2]
+        latency = latency[0:3] + "ms"
+        await channel_sutom.send(f"Time : {str(datetime.now()).partition('.')[0]} ping : {latency}")
         return
 
     if command == ".leet":
