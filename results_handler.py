@@ -300,7 +300,7 @@ async def send_results_command(command: str, client, channel_sutom, me=None):
     .month          Liste des parties du mois\n \
     .me             Mes stats\n \
     .player @player Stats du joueur\n \
-    .graph          Affiche un graph des parties jouées \
+    .graph          Affiche un graph des parties jouées\n \
     .takeda         takeda\n \
     .leet           is it ? 👾```"""
     )
