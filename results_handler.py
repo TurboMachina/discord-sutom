@@ -165,7 +165,11 @@ def contruct_result_message(player, client, graph=False) -> str:
     response += f"\t\t{player['failed']} : -/6\n"
     response += f"\t\tScore moyen : {player['avg_score']:.2f}\n"
     avg_time = str(player["avg_time"]).partition(".")[0]
-    response += f"\t\tTemps moyen : 🕜 {avg_time} 🕜\n\n"
+    response += f"\t\tTemps moyen : 🕜 {avg_time} 🕜\n"
+
+    # Display total number of games based on the score sum 
+    response += f"\t\tNombre de parties jouées : {player['one_try'] + player['two_try'] + player['three_try'] + player['four_try'] + player['five_try'] + player['six_try'] + player['failed']}\n\n"
+
     if graph:
         plt.bar(
             [1, 2, 3, 4, 5, 6],
@@ -290,19 +294,19 @@ async def send_results_command(command: str, client, channel_sutom, me=None):
     print(command)
     help = textwrap.dedent(
         """```
-     .h or .help    Aide\n \
-    .top            Top 3 des meilleurs joueurs par nombre de
-                     tentative\n \
-    .list           Liste tous les joueurs et leurs stats\n \
-    .today          Liste des parties d'aujourd'hui\n \
-    .yesterday      Liste des parties d'hier\n \
-    .week           Liste des parties de la semaine\n \
-    .month          Liste des parties du mois\n \
-    .me             Mes stats\n \
-    .player @player Stats du joueur\n \
-    .graph          Affiche un graph des parties jouées\n \
-    .takeda         takeda\n \
-    .leet           is it ? 👾```"""
+.h or .help     Aide\n \
+.top            Top 3 des meilleurs joueurs par nombre de
+                    tentative\n \
+.list           Liste tous les joueurs et leurs stats\n \
+.today          Liste des parties d'aujourd'hui\n \
+.yesterday      Liste des parties d'hier\n \
+.week           Liste des parties de la semaine\n \
+.month          Liste des parties du mois\n \
+.me             Mes stats\n \
+.player @player Stats du joueur\n \
+.graph          Affiche un graph des parties jouées\n \
+.takeda         takeda\n \
+.leet           is it ? 👾```"""
     )
 
     if command == ".h" or command == ".help":
