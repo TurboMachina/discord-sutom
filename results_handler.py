@@ -232,7 +232,7 @@ def compute_top(client, data, top_3=False, me=None, graph=False, time_delta=-1) 
     # top = sorted(top, key=itemgetter("avg_score"))
     # V3 : Sort by mean score per game, deleted compute_avg_score function
     
-    top = sorted(top, key=itemgetter("mean_total_score"), reverse=True)
+    top = sorted(top, key=itemgetter("mean_total_score"))
 
     if me:
         if type(me) == str:  # Lance une Exception si non-existant
