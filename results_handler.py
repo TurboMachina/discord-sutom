@@ -86,32 +86,6 @@ def compute_avg_time(number_ocr: int, total_time: int) -> str:
         return str(timedelta(seconds=(total_time / number_ocr)))
     except ZeroDivisionError:
         return "00:00:00"
-    """ args : {"user_id": user_id, "one_try": 0, "two_try": 0, "three_try": 0, "four_try": 0, "five_try": 0, "six_try": 0, "failed": 0, "avg_time": 0}
-    """
-
-
-def compute_avg_score(player: dict) -> float:
-    number_of_game = (
-        player["one_try"]
-        + player["two_try"]
-        + player["three_try"]
-        + player["four_try"]
-        + player["five_try"]
-        + player["six_try"]
-        + player["failed"]
-    )
-
-    tot = (
-        player["one_try"]
-        + player["two_try"] * 2
-        + player["three_try"] * 3
-        + player["four_try"] * 4
-        + player["five_try"] * 5
-        + player["six_try"] * 6
-    )
-
-    return tot / number_of_game
-
 
 # This one is a ChatGPT result
 def return_string_index(index: str) -> str:
@@ -144,7 +118,7 @@ def get_results_by_date(today: bool, data, client) -> str:
     return "Pas de résultat 😒"
 
 
-def contruct_result_message(player, client, graph=False) -> str:
+def construct_result_message(player, client, graph=False) -> str:
     avg_time = "00:00:00"
     response = ""
     # Possible only if called by .me
@@ -163,7 +137,7 @@ def contruct_result_message(player, client, graph=False) -> str:
     response += f"\t\t{player['five_try']} : 5/6\n"
     response += f"\t\t{player['six_try']} : 6/6\n"
     response += f"\t\t{player['failed']} : -/6\n"
-    response += f"\t\tScore moyen : {player['avg_score']:.2f}\n"
+    response += f"\t\tScore moyen : {player['mean_total_score']:.2f}\n"
     avg_time = str(player["avg_time"]).partition(".")[0]
     response += f"\t\tTemps moyen : 🕜 {avg_time} 🕜\n"
 
@@ -216,6 +190,7 @@ def compute_top(client, data, top_3=False, me=None, graph=False, time_delta=-1) 
                     "six_try": 0,
                     "failed": 0,
                     "avg_time": record.time_to_guess,
+                    "mean_total_score" : 0,
                     "non_zero_avg_time": 0,
                 }
             )
@@ -243,18 +218,26 @@ def compute_top(client, data, top_3=False, me=None, graph=False, time_delta=-1) 
         player["avg_time"] = compute_avg_time(
             player["non_zero_avg_time"], player["avg_time"]
         )
-
-    # Sort by each type of score
-    # top = sorted(top, key=itemgetter("one_try", "two_try", "three_try", "four_try", "five_try", "six_try"), reverse=True)
-
+    
+    # Compute new sorted score (number of game played / total score) key=mean_total_score
     for player in top:
-        player["avg_score"] = compute_avg_score(player)
-    top = sorted(top, key=itemgetter("avg_score"))
+        scores = [player[return_string_index(str(i))] * i for i in range(1, 7)]
+        total_score = sum(scores)
+        total_games_played = sum(player[return_string_index(str(i))] for i in range(1, 7))
+        player["mean_total_score"] = total_score / total_games_played if total_games_played > 0 else 0
+
+    # V1 : Sort by each type of score
+    # top = sorted(top, key=itemgetter("one_try", "two_try", "three_try", "four_try", "five_try", "six_try"), reverse=True)
+    # V2 : Sort by average score 
+    # top = sorted(top, key=itemgetter("avg_score"))
+    # V3 : Sort by mean score per game, deleted compute_avg_score function
+    
+    top = sorted(top, key=itemgetter("mean_total_score"), reverse=True)
 
     if me:
         if type(me) == str:  # Lance une Exception si non-existant
             me = int(me[2:-1])
-        return contruct_result_message(
+        return construct_result_message(
             next((p for p in top if p["user_id"] == me), None), client, graph
         )
 
@@ -268,7 +251,7 @@ def compute_top(client, data, top_3=False, me=None, graph=False, time_delta=-1) 
             response += "🥉"
         if i not in [0, 1, 2]:
             response += f"{i+1}. "
-        response += contruct_result_message(player, client, graph)
+        response += construct_result_message(player, client, graph)
         i += 1
         if top_3 and i > 2:
             break
