@@ -6,6 +6,7 @@ import random
 from datetime import timedelta, datetime
 from operator import itemgetter
 import textwrap
+import math
 
 import matplotlib.pyplot as plt
 
@@ -81,8 +82,8 @@ def compute_avg_time_from_str_timestamp(new_time: int, avg_time: int) -> str:
 
 def compute_avg_time(number_ocr: int, total_time: int) -> str:
     try:
-        print("total_time", total_time)
-        print("number_ocr", number_ocr)
+        # print("total_time", total_time)
+        # print("number_ocr", number_ocr)
         return str(timedelta(seconds=(total_time / number_ocr)))
     except ZeroDivisionError:
         return "00:00:00"
@@ -140,6 +141,7 @@ def construct_result_message(player, client, graph=False) -> str:
     response += f"\t\tScore moyen : {player['mean_total_score']:.2f}\n"
     avg_time = str(player["avg_time"]).partition(".")[0]
     response += f"\t\tTemps moyen : 🕜 {avg_time} 🕜\n"
+    response += f"\t*🏆 RANK 🏆 : {player['rank']}*\n"
 
     # Display total number of games based on the score sum 
     response += f"\t\tNombre de parties jouées : {player['one_try'] + player['two_try'] + player['three_try'] + player['four_try'] + player['five_try'] + player['six_try'] + player['failed']}\n\n"
@@ -165,7 +167,7 @@ def construct_result_message(player, client, graph=False) -> str:
 
 
 def compute_top(client, data, top_3=False, me=None, graph=False, time_delta=-1) -> str:
-    response = "🏆 TABLEAU DES SCORES 🏆\n"
+    response = "--- TABLEAU DES SCORES ---\n"
     top = []
 
     for record in data:
@@ -174,7 +176,7 @@ def compute_top(client, data, top_3=False, me=None, graph=False, time_delta=-1) 
             date_format = "%Y-%m-%d"
             a = datetime.strptime(record.date_of_try, date_format)
             b = datetime.strptime(str(datetime.now().date()), date_format)
-            print((b - a).days)
+            # print((b - a).days)
             if (b - a).days > time_delta:
                 continue
         # Adding new user to the top list
@@ -191,6 +193,7 @@ def compute_top(client, data, top_3=False, me=None, graph=False, time_delta=-1) 
                     "failed": 0,
                     "avg_time": record.time_to_guess,
                     "mean_total_score" : 0,
+                    "rank" : 0,
                     "non_zero_avg_time": 0,
                 }
             )
@@ -221,10 +224,12 @@ def compute_top(client, data, top_3=False, me=None, graph=False, time_delta=-1) 
     
     # Compute new sorted score (number of game played / total score) key=mean_total_score
     for player in top:
+        # mean_total_score 
         scores = [player[return_string_index(str(i))] * i for i in range(1, 7)]
         total_score = sum(scores)
         total_games_played = sum(player[return_string_index(str(i))] for i in range(1, 7))
         player["mean_total_score"] = total_score / total_games_played if total_games_played > 0 else 0
+        player["rank"] = compute_rank(player, total_games_played)
 
     # V1 : Sort by each type of score
     # top = sorted(top, key=itemgetter("one_try", "two_try", "three_try", "four_try", "five_try", "six_try"), reverse=True)
@@ -232,7 +237,7 @@ def compute_top(client, data, top_3=False, me=None, graph=False, time_delta=-1) 
     # top = sorted(top, key=itemgetter("avg_score"))
     # V3 : Sort by mean score per game, deleted compute_avg_score function
     
-    top = sorted(top, key=itemgetter("mean_total_score"))
+    top = sorted(top, key=itemgetter("rank"), reverse=True)
 
     if me:
         if type(me) == str:  # Lance une Exception si non-existant
@@ -257,6 +262,49 @@ def compute_top(client, data, top_3=False, me=None, graph=False, time_delta=-1) 
             break
     return response
 
+def get_seconds(time_str):
+    time_parts = time_str.split(':')
+    seconds = float(time_parts[-1])
+    if len(time_parts) > 2:
+        minutes = int(time_parts[-2])
+        seconds += minutes * 60
+    if len(time_parts) > 2:
+        hours = int(time_parts[-3])
+        seconds += hours * 3600
+    return int(seconds)
+
+def compute_rank(player, total_games_played) -> int:
+    if total_games_played == 0:
+        return 0
+    ## SCORE BY TRIES
+    score = \
+    player["one_try"] * 6 + \
+    player["two_try"] * 5 + \
+    player["three_try"] * 4 + \
+    player["four_try"] * 3 + \
+    player["five_try"] * 2 + \
+    player["six_try"] * 1
+    
+    score = score / total_games_played
+
+    ## SCORE BY AVERAGE TIME
+    # bonus_by_time : percentage of boost despending of the average time in seconds, from 1 to 10 800 (3 hours)
+    bonus_by_time = { 600 : 1.33, 1200 : 1.25, 1800 : 1.20, 2400 : 1.15, 3000 : 1.10, 3600 : 1.09, 4200 : 1.08, 4800 : 1.07, 5400 : 1.06, 6000 : 1.05, 6600 : 1.04, 8400 : 1.03, 9600 : 1.02, 10800 : 1.01}
+    for time in bonus_by_time:
+        if get_seconds(player["avg_time"]) <= time:
+            score = score * bonus_by_time[time]
+            # print("Attribution de bonus de temps : " + str(bonus_by_time[time]) + "pour un temps de " + player["avg_time"])
+            break
+
+    ## SCORE BY NUMER OF GAMES PLAYED
+    # score = score + (score * total_games_played / 100)
+    # More smooth version, the higher the number of games played, the less the score is impacted
+    score = score + (score * math.log(total_games_played + 10))
+
+    ## SCORE BY STREAKS
+    ## TODO
+
+    return math.trunc(score * 1000)
 
 def print_console_results(file_path: str):
     with open(file_path, "r") as f:
@@ -278,8 +326,7 @@ async def send_results_command(command: str, client, channel_sutom, me=None):
     help = textwrap.dedent(
         """```
 .h or .help     Aide\n \
-.top            Top 3 des meilleurs joueurs par nombre de
-                    tentative\n \
+.top            Top 3 des meilleurs joueurs\n \
 .list           Liste tous les joueurs et leurs stats\n \
 .today          Liste des parties d'aujourd'hui\n \
 .yesterday      Liste des parties d'hier\n \
@@ -287,10 +334,41 @@ async def send_results_command(command: str, client, channel_sutom, me=None):
 .month          Liste des parties du mois\n \
 .me             Mes stats\n \
 .player @player Stats du joueur\n \
+.rank           Explication du rank score\n \
 .graph          Affiche un graph des parties jouées\n \
 .takeda         takeda\n \
 .leet           is it ? 👾```"""
     )
+    rank_message = textwrap.dedent(
+        """```
+Le classement est calculé à l'aide de trois critères : le nombre d'essais moyen du joueur pour terminer une partie, le temps moyen pris pour terminer ces parties et le nombre total de parties jouées.
+Le premier critère est le nombre d'essais. Le score est calculé en multipliant le nombre d'essais de chaque type (un, deux, trois, quatre, cinq et six essais) par un poids correspondant (respectivement 6, 5, 4, 3, 2 et 1). La fonction calcule ensuite le score moyen par partie en divisant le score total par le nombre total de parties jouées.
+Le deuxième critère est le score par temps moyen. La fonction applique un bonus au score du joueur en fonction de son temps moyen, mesuré en secondes. Le bonus est un pourcentage d'augmentation qui dépend du temps moyen, allant de 1 % à 33 %. Plus le temps moyen est long, plus le bonus est faible. Vous pouvez utiliser .bonus_temps pour obtenir les multiplicateurs.
+Le troisième critère est le score en fonction du nombre total de parties jouées. La fonction applique un bonus au score du joueur en fonction du nombre de parties jouées. Le bonus est une fonction logarithmique qui augmente avec le nombre de parties jouées, mais qui a un rendement décroissant. Cela signifie que plus un joueur a joué de parties, moins chaque partie supplémentaire a d'impact sur son score.
+Le résultat final de la fonction est le rang du joueur, exprimé sous la forme d'un nombre entier. Plus le rang est élevé, meilleure est la performance du joueur. 
+
+```"""
+    )
+    # TODO : hardcodé, à changer dans une fonction qui compute le dict mis en général
+    bonus_time = textwrap.dedent(
+        """```
+Si en dessous de : bonus ajouté
+\thh:mm:ss : %
+\t00:10:00 : 1.33%
+\t00:20:00 : 1.25%
+\t00:30:00 : 1.20%
+\t00:40:00 : 1.15%
+\t00:50:00 : 1.10%
+\t01:00:00 : 1.09%
+\t01:10:00 : 1.08%
+\t01:20:00 : 1.07%
+\t01:30:00 : 1.06%
+\t01:40:00 : 1.05%
+\t01:50:00 : 1.04%
+\t02:20:00 : 1.03%
+\t02:40:00 : 1.02%
+\t03:00:00 : 1.01%
+        ```""")
 
     if command == ".h" or command == ".help":
         await channel_sutom.send(help)
@@ -337,11 +415,19 @@ async def send_results_command(command: str, client, channel_sutom, me=None):
         return
 
     if command == ".player":
-        print(arg)
+        # print(arg)
         await channel_sutom.send(
             "Commande non fonctionnelle : désactivée"
             # compute_top(client, read_results(FILE_RESULTS_PATH), False, arg)
         )
+        return
+
+    if command == ".rank":
+        await channel_sutom.send(rank_message)
+        return
+    
+    if command == ".bonus_temps":
+        await channel_sutom.send(bonus_time)
         return
 
     if command == ".graph":
