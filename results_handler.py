@@ -142,7 +142,7 @@ def construct_result_message(player, client, graph=False) -> str:
     avg_time = str(player["avg_time"]).partition(".")[0]
     response += f"\t\tTemps moyen : 🕜 {avg_time} 🕜\n"
     response += f"\t*🏆 RANK 🏆 : {player['rank']}*\n"
-    response += f"\t*Alternative rank : {player['rank']}*\n"
+    response += f"\t*Alternative rank : {player['alt_rank']}*\n"
 
     # Display total number of games based on the score sum 
     response += f"\t\tNombre de parties jouées : {player['one_try'] + player['two_try'] + player['three_try'] + player['four_try'] + player['five_try'] + player['six_try'] + player['failed']}\n\n"
