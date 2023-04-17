@@ -142,6 +142,7 @@ def construct_result_message(player, client, graph=False) -> str:
     avg_time = str(player["avg_time"]).partition(".")[0]
     response += f"\t\tTemps moyen : 🕜 {avg_time} 🕜\n"
     response += f"\t*🏆 RANK 🏆 : {player['rank']}*\n"
+    response += f"\t*Alternative rank : {player['rank']}*\n"
 
     # Display total number of games based on the score sum 
     response += f"\t\tNombre de parties jouées : {player['one_try'] + player['two_try'] + player['three_try'] + player['four_try'] + player['five_try'] + player['six_try'] + player['failed']}\n\n"
@@ -194,6 +195,7 @@ def compute_top(client, data, top_3=False, me=None, graph=False, time_delta=-1) 
                     "avg_time": record.time_to_guess,
                     "mean_total_score" : 0,
                     "rank" : 0,
+                    "alt_rank" : 0,
                     "non_zero_avg_time": 0,
                 }
             )
@@ -230,6 +232,7 @@ def compute_top(client, data, top_3=False, me=None, graph=False, time_delta=-1) 
         total_games_played = sum(player[return_string_index(str(i))] for i in range(1, 7))
         player["mean_total_score"] = total_score / total_games_played if total_games_played > 0 else 0
         player["rank"] = compute_rank(player, total_games_played)
+        player["alt_rank"] = compute_alt_rank(player, total_games_played)
 
     # V1 : Sort by each type of score
     # top = sorted(top, key=itemgetter("one_try", "two_try", "three_try", "four_try", "five_try", "six_try"), reverse=True)
@@ -303,6 +306,34 @@ def compute_rank(player, total_games_played) -> int:
 
     ## SCORE BY STREAKS
     ## TODO
+
+    return math.trunc(score * 1000)
+
+def compute_alt_rank(player, total_games_played) -> int:
+    if total_games_played == 0:
+        return 0
+    ## SCORE BY TRIES
+    score = \
+    player["one_try"] * 6 + \
+    player["two_try"] * 5 + \
+    player["three_try"] * 4 + \
+    player["four_try"] * 3 + \
+    player["five_try"] * 2 + \
+    player["six_try"] * 1
+    
+    score = score / total_games_played
+
+    ## SCORE BY AVERAGE TIME
+    # bonus_by_time : percentage of boost despending of the average time in seconds, from 1 to 10 800 (3 hours)
+    # bonus_by_time = { 600 : 1.33, 1200 : 1.25, 1800 : 1.20, 2400 : 1.15, 3000 : 1.10, 3600 : 1.09, 4200 : 1.08, 4800 : 1.07, 5400 : 1.06, 6000 : 1.05, 6600 : 1.04, 8400 : 1.03, 9600 : 1.02, 10800 : 1.01}
+    # for time in bonus_by_time:
+    #     if get_seconds(player["avg_time"]) <= time:
+    #         score = score * bonus_by_time[time]
+    #         # print("Attribution de bonus de temps : " + str(bonus_by_time[time]) + "pour un temps de " + player["avg_time"])
+    #         break
+
+    ## Penality when total_games_played < 50
+    score = score * math.sqrt(min(total_games_played/50,1))
 
     return math.trunc(score * 1000)
 
