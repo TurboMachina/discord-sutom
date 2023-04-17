@@ -335,17 +335,19 @@ async def send_results_command(command: str, client, channel_sutom, me=None):
 .me             Mes stats\n \
 .player @player Stats du joueur\n \
 .rank           Explication du rank score\n \
+.bonus_temps    Explication du bonus de temps utilisé dans le rank score\n \
 .graph          Affiche un graph des parties jouées\n \
 .takeda         takeda\n \
 .leet           is it ? 👾```"""
     )
     rank_message = textwrap.dedent(
         """```
-Le classement est calculé à l'aide de trois critères : le nombre d'essais moyen du joueur pour terminer une partie, le temps moyen pris pour terminer ces parties et le nombre total de parties jouées.
-Le premier critère est le nombre d'essais. Le score est calculé en multipliant le nombre d'essais de chaque type (un, deux, trois, quatre, cinq et six essais) par un poids correspondant (respectivement 6, 5, 4, 3, 2 et 1). La fonction calcule ensuite le score moyen par partie en divisant le score total par le nombre total de parties jouées.
-Le deuxième critère est le score par temps moyen. La fonction applique un bonus au score du joueur en fonction de son temps moyen, mesuré en secondes. Le bonus est un pourcentage d'augmentation qui dépend du temps moyen, allant de 1 % à 33 %. Plus le temps moyen est long, plus le bonus est faible. Vous pouvez utiliser .bonus_temps pour obtenir les multiplicateurs.
-Le troisième critère est le score en fonction du nombre total de parties jouées. La fonction applique un bonus au score du joueur en fonction du nombre de parties jouées. Le bonus est une fonction logarithmique qui augmente avec le nombre de parties jouées, mais qui a un rendement décroissant. Cela signifie que plus un joueur a joué de parties, moins chaque partie supplémentaire a d'impact sur son score.
-Le résultat final de la fonction est le rang du joueur, exprimé sous la forme d'un nombre entier. Plus le rang est élevé, meilleure est la performance du joueur. 
+Le classement est calculé à l'aide de trois critères : le nombre d'essais moyen du joueur pour terminer une partie, le temps moyen pris pour terminer ces parties et le nombre total de parties jouées.\n
+Le premier critère est le nombre d'essais. Le score est calculé en multipliant le nombre d'essais de chaque type (un, deux, trois, quatre, cinq et six essais) par un poids correspondant (respectivement 6, 5, 4, 3, 2 et 1).\n
+La fonction calcule ensuite le score moyen par partie en divisant le score total par le nombre total de parties jouées.\n
+Le deuxième critère est le score par temps moyen. La fonction applique un bonus au score du joueur en fonction de son temps moyen, mesuré en secondes. Le bonus est un pourcentage d'augmentation qui dépend du temps moyen, allant de 1 % à 33 %. Plus le temps moyen est long, plus le bonus est faible. Vous pouvez utiliser .bonus_temps pour obtenir les multiplicateurs.\n
+Le troisième critère est le score en fonction du nombre total de parties jouées. La fonction applique un bonus au score du joueur en fonction du nombre de parties jouées. Le bonus est une fonction logarithmique qui augmente avec le nombre de parties jouées, mais qui a un rendement décroissant. Cela signifie que plus un joueur a joué de parties, moins chaque partie supplémentaire a d'impact sur son score.\n
+Le résultat final de la fonction est le rang du joueur, exprimé sous la forme d'un nombre entier. Plus le rang est élevé, meilleure est la performance du joueur.\n
 
 ```"""
     )
@@ -425,7 +427,7 @@ Si en dessous de : bonus ajouté
     if command == ".rank":
         await channel_sutom.send(rank_message)
         return
-    
+
     if command == ".bonus_temps":
         await channel_sutom.send(bonus_time)
         return
