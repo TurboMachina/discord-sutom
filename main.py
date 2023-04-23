@@ -10,7 +10,7 @@ import results_handler as rd
 
 HELP_MSG = "main.py -t --test / -r --run"
 
-
+# Example
 # Example of fetched message :
 """ 
 #SUTOM #999 4/6 13:37
